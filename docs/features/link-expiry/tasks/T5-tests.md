@@ -13,7 +13,7 @@ status: "todo"
 # T5 — Tests
 
 ## Why
-Prove AC-01..05, including the boundary moment and the legacy no-lifetime case ([[../spec.md]] §5, [[../data-model.md]] fixtures).
+Prove AC-01..05, including the boundary moment and the legacy no-lifetime case ([spec.md](../spec.md) §5, [data-model.md](../data-model.md) fixtures).
 
 ## What
 Unit suite in `tests/unit/expiry.test.js` + integration suite in
@@ -28,4 +28,4 @@ and legacy no-lifetime fixtures.
 - [ ] the boundary moment and a legacy no-lifetime link are both exercised
 
 ## Notes
-Fixtures per [[../data-model.md]] (valid, expired, legacy no-lifetime). Depends on the read-path guard (T3).
+Fixtures per [data-model.md](../data-model.md) (valid, expired, legacy no-lifetime). Depends on the read-path guard (T3).

@@ -13,7 +13,7 @@ status: "done"
 # T2 — Domain functions
 
 ## Why
-Domain layer for the shortener, HTTP-free (see [[../sad.md]] §5, ADR 0001). Backs AC-01/02/04.
+Domain layer for the shortener, HTTP-free (see [sad.md](../sad.md) §5, ADR 0001). Backs AC-01/02/04.
 
 ## What
 Pure functions over a `db` handle: `generateCode()` (base62/7), `createLink(db,url)` (insert + collision guard), `resolveLink(db,code)` (read + clicks++), `listLinks(db)`, `getStats(db,code)`.

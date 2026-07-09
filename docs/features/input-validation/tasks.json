@@ -5,46 +5,71 @@
       "id": "T1",
       "title": "Domain: validateUrl guard (trim, non-empty, scheme allowlist, host, length)",
       "layer": "domain",
+      "wave": 1,
+      "priority": "Must",
+      "estimate": "S",
       "deps": [],
+      "blocks": ["T2"],
       "acs": ["AC-02", "AC-03", "AC-04", "AC-05", "AC-06"],
-      "dod": "validateUrl(raw) returns normalized url or throws typed validation error; pure, unit-testable; first red→green target = empty url (AC-02)",
-      "files_hint": ["src/shorten.js"]
+      "dod": "validateUrl(raw) returns the trimmed url or throws ValidationError whose `reason` is one of 'url required' | 'url too long' | 'malformed url' | 'unsafe scheme'; pure, unit-testable without HTTP; first red→green target = empty url (AC-02)",
+      "files_hint": ["src/shorten.js"],
+      "context_budget": "~2500 tokens"
     },
     {
       "id": "T2",
       "title": "Domain: dedup — reuse existing code for an already-stored normalized url",
       "layer": "domain",
+      "wave": 1,
+      "priority": "Must",
+      "estimate": "S",
       "deps": ["T1"],
-      "acs": ["AC-07"],
-      "dod": "createLink looks up the normalized url; if present returns existing code and inserts nothing",
-      "files_hint": ["src/shorten.js"]
+      "blocks": ["T3"],
+      "acs": ["AC-01", "AC-07"],
+      "dod": "createLink validates first, then looks up the normalized url; on a hit it returns { code, created: false } and inserts nothing; on a miss it inserts and returns { code, created: true }",
+      "files_hint": ["src/shorten.js"],
+      "context_budget": "~2500 tokens"
     },
     {
       "id": "T3",
-      "title": "App: 400 on invalid, 200 on dedup, 201 on new",
+      "title": "App: 400 on invalid, 200 on dedup hit, 201 on new",
       "layer": "app",
+      "wave": 2,
+      "priority": "Must",
+      "estimate": "S",
       "deps": ["T2"],
+      "blocks": ["T4", "T5"],
       "acs": ["AC-01", "AC-02", "AC-03", "AC-04", "AC-05", "AC-06", "AC-07"],
-      "dod": "POST /api/shorten maps validation error to 400 {error}, dedup hit to 200 {code}, new create to 201; seed tests (tests/unit/shorten.test.js, tests/integration/shorten.test.js) stay green",
-      "files_hint": ["src/app.js"]
+      "dod": "POST /api/shorten maps ValidationError to 400 { error: reason }, a dedup hit to 200 { code, short_url }, a new create to 201; existing tests (tests/unit/shorten.test.js, tests/integration/shorten.test.js) stay green",
+      "files_hint": ["src/app.js"],
+      "context_budget": "~3000 tokens"
     },
     {
       "id": "T4",
-      "title": "Обморда: inline validation error under the form",
+      "title": "Frontend: inline validation error under the form",
       "layer": "ui",
+      "wave": 3,
+      "priority": "Should",
+      "estimate": "S",
       "deps": ["T3"],
+      "blocks": [],
       "acs": ["AC-02"],
-      "dod": "a 400 shows the error message inline instead of a silent failure",
-      "files_hint": ["src/public/app.js", "src/public/index.html", "src/public/style.css"]
+      "dod": "a 400 renders its `error` string in #error under the form instead of failing silently; the next successful submit clears it",
+      "files_hint": ["src/public/app.js", "src/public/index.html", "src/public/style.css"],
+      "context_budget": "~2000 tokens"
     },
     {
       "id": "T5",
       "title": "Tests: unit + integration for AC-01..07",
       "layer": "tests",
+      "wave": 3,
+      "priority": "Must",
+      "estimate": "S",
       "deps": ["T3"],
+      "blocks": [],
       "acs": ["AC-01", "AC-02", "AC-03", "AC-04", "AC-05", "AC-06", "AC-07"],
-      "dod": "npm run test:fast green; empty/scheme/malformed/too-long/trim/dedup all covered",
-      "files_hint": ["tests/unit/validation.test.js", "tests/integration/validation.test.js"]
+      "dod": "npm run test:fast green; empty / scheme / malformed / too-long / trim / dedup all covered, plus the 2048-2049 boundary and a 'no row written on reject' assertion",
+      "files_hint": ["tests/unit/validation.test.js", "tests/integration/validation.test.js"],
+      "context_budget": "~3000 tokens"
     }
   ]
 }

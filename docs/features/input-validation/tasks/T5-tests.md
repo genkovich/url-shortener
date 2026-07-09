@@ -13,14 +13,14 @@ status: "todo"
 # T5 — Tests
 
 ## Why
-Prove AC-01..07, including each rejection branch, trimming, and dedup ([[../spec.md]] §5, [[../test-plan.md]]). These become the step-1 ground-truth gate.
+Prove AC-01..07, including each rejection branch, trimming, and dedup ([spec.md](../spec.md) §5, [test-plan.md](../test-plan.md)). These become the step-1 ground-truth gate.
 
 ## What
 Unit suite in `tests/unit/validation.test.js` + integration suite in
 `tests/integration/validation.test.js`: a valid URL shortens (AC-01); empty/whitespace
 refused (AC-02); unsafe schemes refused (AC-03); malformed refused (AC-04); over-length
 refused (AC-05); a padded URL is stored trimmed (AC-06); the same URL reuses its code with
-no second row (AC-07). Use the fixtures in [[../test-plan.md]] and the boundary cases
+no second row (AC-07). Use the fixtures in [test-plan.md](../test-plan.md) and the boundary cases
 (exactly-max length, uppercase scheme).
 
 ## Definition of Done

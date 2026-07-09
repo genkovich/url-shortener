@@ -42,5 +42,5 @@ The create path must refuse unsafe and malformed URLs. We must decide *where* va
 - Max length (2048) and trim normalization ride in the same guard.
 
 ## Links
-- Spec: [[../spec.md]] §5 (AC-03), §6.1.
-- SAD: [[../sad.md]] §4, §10 (QG-1).
+- Spec: [spec.md](../spec.md) §5 (AC-03), §6.1.
+- SAD: [sad.md](../sad.md) §4, §10 (QG-1).

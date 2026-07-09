@@ -13,7 +13,7 @@ status: "todo"
 # T4 — Expired badge
 
 ## Why
-Surface each link's expired/active state in the frontend list, consistent with follow behaviour ([[../sad.md]] §5, [[../spec.md]] AC-05). Backs AC-05.
+Surface each link's expired/active state in the frontend list, consistent with follow behaviour ([sad.md](../sad.md) §5, [spec.md](../spec.md) AC-05). Backs AC-05.
 
 ## What
 In the frontend (`app.js`, `index.html`, `style.css`), show an expired/active badge per row, derived from the link's lifetime versus now, matching what following the link would do.

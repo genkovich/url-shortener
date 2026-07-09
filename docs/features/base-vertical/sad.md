@@ -38,8 +38,8 @@ C4Context
 
 ## 4. Solution strategy
 - Keep domain logic HTTP-free in `shorten.js` (→ ADR none needed, follows map).
-- Single SQLite table, synchronous access (→ [[../../adr/0002-sqlite-better-sqlite3.md]]).
-- base62/7 codes (→ [[../../adr/0001-base62-7-char-codes.md]]).
+- Single SQLite table, synchronous access (→ [0002-sqlite-better-sqlite3.md](../../adr/0002-sqlite-better-sqlite3.md)).
+- base62/7 codes (→ [0001-base62-7-char-codes.md](../../adr/0001-base62-7-char-codes.md)).
 
 ## 5. Building block view
 Layered: `db` (infra) ← `shorten` (domain) ← `app` (routes) ← `server` (wiring); `public` (ui).

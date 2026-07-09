@@ -13,7 +13,7 @@ status: "todo"
 # T3 — Refuse expired follows
 
 ## Why
-Read-path guard: an expired link is refused instead of redirecting, and creation accepts a chosen lifetime ([[../sad.md]] §4, §6). Backs AC-02/03.
+Read-path guard: an expired link is refused instead of redirecting, and creation accepts a chosen lifetime ([sad.md](../sad.md) §4, §6). Backs AC-02/03.
 
 ## What
 In `src/app.js`, the follow route refuses a link whose lifetime has passed and reports it as gone; a link still within its lifetime redirects as before. The create route accepts an optional lifetime in days and passes it to the domain layer.

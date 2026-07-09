@@ -13,7 +13,7 @@ status: "done"
 # T5 — Seed tests
 
 ## Why
-Seed suite proving AC-01..04 on the shipped slice ([[../spec.md]] §5, Test plan). Precedent for every feature's tests.
+Seed suite proving AC-01..04 on the shipped slice ([spec.md](../spec.md) §5, Test plan). Precedent for every feature's tests.
 
 ## What
 supertest-driven suite split across `tests/integration/shorten.test.js` (HTTP seam) and

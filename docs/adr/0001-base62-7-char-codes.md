@@ -41,7 +41,7 @@ The shortener must produce short, unique, URL-safe codes. Alphabet and length mu
 - At billions of links a longer length would be needed (out of scope).
 
 ## Links
-- Spec: [[../features/base-vertical/spec.md]] §5 (AC-01).
-- SAD: [[../features/base-vertical/sad.md]] §4, §9.
-- Related ADR: [[0002-sqlite-better-sqlite3.md]].
+- Spec: [spec.md](../features/base-vertical/spec.md) §5 (AC-01).
+- SAD: [sad.md](../features/base-vertical/sad.md) §4, §9.
+- Related ADR: [0002-sqlite-better-sqlite3.md](./0002-sqlite-better-sqlite3.md).
 - Domain: `src/shorten.js` → `generateCode()`.

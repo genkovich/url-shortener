@@ -13,7 +13,7 @@ status: "done"
 # T1 — Links table + migrate
 
 ## Why
-Backing store for the shortener: the `links` table plus the `openDb` entry point every layer builds on (see [[../sad.md]] §5). Backs AC-01.
+Backing store for the shortener: the `links` table plus the `openDb` entry point every layer builds on (see [sad.md](../sad.md) §5). Backs AC-01.
 
 ## What
 `openDb(path)` opens a synchronous SQLite handle and ensures the `links` table exists with columns for the short code (primary key), the original url, a creation timestamp, and a click counter. Callers receive a ready handle; the seed schema needs no separate migrate step.

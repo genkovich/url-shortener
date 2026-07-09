@@ -13,7 +13,7 @@ status: "done"
 # T4 — Frontend
 
 ## Why
-Frontend a visitor uses to shorten and inspect links ([[../sad.md]] §5). Backs AC-01/03 (and shows the list state of AC-05).
+Frontend a visitor uses to shorten and inspect links ([sad.md](../sad.md) §5). Backs AC-01/03 (and shows the list state of AC-05).
 
 ## What
 Static page (`index.html`, `app.js`, `style.css`) with a form to submit a url, a result area showing the returned short handle, and a table listing existing links with their click counts. Talks to the app routes (T3).

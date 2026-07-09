@@ -63,6 +63,7 @@ docs/           architecture-map.md · CONTEXT.md · roadmap.md · adr/ · featu
 | `npm test` | усі три рівні |
 | `npm run gate` | `lint` + `npm test` |
 | `npm run tools:check` | вендоровані копії скіла не розійшлись між п'ятьма інструментами |
+| `npm run links:check` | у доці немає битих посилань, мертвих якорів і `[[wikilinks]]` |
 | `npm run verify` | усе вище однією командою, матриця, `exit 1` на червоному |
 
 У `verify` немає «м'яких» пропусків: зникне скрипт — матриця почервоніє. Єдиний свідомий

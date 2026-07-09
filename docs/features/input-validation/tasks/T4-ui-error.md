@@ -13,7 +13,7 @@ status: "todo"
 # T4 — Inline UI error
 
 ## Why
-A refused create should tell the visitor why, not fail silently ([[../spec.md]] §4 US-02). Gives practice step 2 (Playwright) something to assert through the frontend.
+A refused create should tell the visitor why, not fail silently ([spec.md](../spec.md) §4 US-02). Gives practice step 2 (Playwright) something to assert through the frontend.
 
 ## What
 In `src/public/`, when `POST /api/shorten` returns 400, show the `error` message inline under the form (not an alert); clear it on the next successful create. Reuse the existing CSS tokens — no framework.

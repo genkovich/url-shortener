@@ -37,7 +37,7 @@ C4Context
 ```
 
 ## 4. Solution strategy
-- Store `expires_at` (nullable → default resolved at create) on `links` (→ [[adr/0001-expiry-check-on-read.md]]).
+- Store `expires_at` (nullable → default resolved at create) on `links` (→ [0001-expiry-check-on-read.md](./adr/0001-expiry-check-on-read.md)).
 - Check expiry on the follow (read) path; refuse the link when its lifetime has passed.
 - List computes active/expired from `expires_at` vs now.
 

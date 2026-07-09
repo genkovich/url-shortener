@@ -1,6 +1,6 @@
 # Epic — base-vertical
 
-> **Spec:** [[../spec.md]] · **Design:** [[../sad.md]] · **ADRs:** [[../../../adr/0001-base62-7-char-codes.md]], [[../../../adr/0002-sqlite-better-sqlite3.md]]
+> **Spec:** [spec.md](../spec.md) · **Design:** [sad.md](../sad.md) · **ADRs:** [0001-base62-7-char-codes.md](../../../adr/0001-base62-7-char-codes.md), [0002-sqlite-better-sqlite3.md](../../../adr/0002-sqlite-better-sqlite3.md)
 
 ## Goal
 Ship the smallest useful shortener slice (shorten + redirect + list) as a worked SDD example.

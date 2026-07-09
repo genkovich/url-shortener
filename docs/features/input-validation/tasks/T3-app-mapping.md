@@ -13,7 +13,7 @@ status: "todo"
 # T3 — App mapping (400 / 200 / 201)
 
 ## Why
-Wire the domain outcomes (T1/T2) to HTTP so the visitor gets the right status and error shape ([[../sad.md]] §6, §8; [[../../../architecture-map.md]] status codes). Backs the full AC set at the boundary.
+Wire the domain outcomes (T1/T2) to HTTP so the visitor gets the right status and error shape ([sad.md](../sad.md) §6, §8; [architecture-map.md](../../../architecture-map.md) status codes). Backs the full AC set at the boundary.
 
 ## What
 In `POST /api/shorten` (`src/app.js`): call the guard; on a validation error respond `400 { error }`; on a dedup hit respond `200 { code, short_url }` with the existing code; on a new create respond `201` as today. Keep the route thin — no validation logic inline; delegate to `src/shorten.js`.

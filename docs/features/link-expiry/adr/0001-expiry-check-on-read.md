@@ -40,5 +40,5 @@ Links may carry a lifetime. We must decide how an expired link stops working: ch
 - List must compute active/expired rather than assuming presence = valid.
 
 ## Links
-- Spec: [[../spec.md]] §5 (AC-03), §8.
-- SAD: [[../sad.md]] §4, §6.
+- Spec: [spec.md](../spec.md) §5 (AC-03), §8.
+- SAD: [sad.md](../sad.md) §4, §6.

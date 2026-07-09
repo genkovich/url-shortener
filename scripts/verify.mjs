@@ -70,6 +70,7 @@ npmGate('lint');
 npmGate('test:fast');
 npmGate('test:e2e');
 npmGate('tools:check');
+npmGate('links:check');
 
 const ok = rows.filter((r) => r.status === 'ok').length;
 const failed = rows.filter((r) => r.status === 'fail');

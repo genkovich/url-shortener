@@ -13,10 +13,10 @@ status: "todo"
 # T2 — Dedup
 
 ## Why
-The same URL shortened twice should not create two rows ([[../spec.md]] §5 AC-07, [[../sad.md]] §10 QG-3). Reuse the existing code instead. Runs on the normalized URL from T1 so padded and unpadded forms collapse together.
+The same URL shortened twice should not create two rows ([spec.md](../spec.md) §5 AC-07, [sad.md](../sad.md) §10 QG-3). Reuse the existing code instead. Runs on the normalized URL from T1 so padded and unpadded forms collapse together.
 
 ## What
-In `createLink` (`src/shorten.js`), after validation, look up the normalized URL; if a link already exists, return its code and insert nothing; otherwise create as today. Keep the lookup simple (a scan/query by url — no index needed at toy scale, [[../sad.md]] §11).
+In `createLink` (`src/shorten.js`), after validation, look up the normalized URL; if a link already exists, return its code and insert nothing; otherwise create as today. Keep the lookup simple (a scan/query by url — no index needed at toy scale, [sad.md](../sad.md) §11).
 
 ## Definition of Done
 - [ ] shortening an already-stored (normalized) URL returns the existing code

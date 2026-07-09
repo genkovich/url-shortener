@@ -37,7 +37,7 @@ C4Context
 ```
 
 ## 4. Solution strategy
-- Add a pure domain guard `validateUrl(raw)` in `src/shorten.js`: trim → non-empty → parseable `URL` with a host → scheme in the `http`/`https` allowlist → length ≤ max. Returns the normalized URL or a typed validation error (→ [[adr/0001-reject-at-edge-allowlist-schemes.md]]).
+- Add a pure domain guard `validateUrl(raw)` in `src/shorten.js`: trim → non-empty → parseable `URL` with a host → scheme in the `http`/`https` allowlist → length ≤ max. Returns the normalized URL or a typed validation error (→ [0001-reject-at-edge-allowlist-schemes.md](./adr/0001-reject-at-edge-allowlist-schemes.md)).
 - `createLink` calls the guard first, then de-duplicates: if the normalized URL already has a code, return that code instead of inserting.
 - `POST /api/shorten` maps a validation error to `400 { error }`, a new create to `201`, and a dedup hit to `200` with the existing code.
 - Frontend shows the error message inline under the form instead of a silent failure.

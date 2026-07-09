@@ -42,7 +42,7 @@ Persistent link storage must run on any contributor's machine (Windows/macOS/Lin
 - SQLite is not a production DB under concurrent load (out of scope at this size).
 
 ## Links
-- Spec: [[../features/base-vertical/spec.md]] §1.
-- SAD: [[../features/base-vertical/sad.md]] §4, §9.
-- Related ADR: [[0001-base62-7-char-codes.md]].
+- Spec: [spec.md](../features/base-vertical/spec.md) §1.
+- SAD: [sad.md](../features/base-vertical/sad.md) §4, §9.
+- Related ADR: [0001-base62-7-char-codes.md](./0001-base62-7-char-codes.md).
 - Infra: `src/db.js`.

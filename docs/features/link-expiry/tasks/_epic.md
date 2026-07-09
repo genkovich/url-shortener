@@ -1,6 +1,6 @@
 # Epic — link-expiry
 
-> **Spec:** [[../spec.md]] · **Design:** [[../sad.md]] · **Data model:** [[../data-model.md]] · **ADRs:** [[../adr/0001-expiry-check-on-read.md]]
+> **Spec:** [spec.md](../spec.md) · **Design:** [sad.md](../sad.md) · **Data model:** [data-model.md](../data-model.md) · **ADRs:** [0001-expiry-check-on-read.md](../adr/0001-expiry-check-on-read.md)
 
 ## Goal
 Give links an optional lifetime; refuse expired ones on read; show state in the list.

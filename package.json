@@ -25,7 +25,8 @@
     "gate": "npm run lint && npm test",
     "doctor": "node scripts/doctor.mjs",
     "verify": "node scripts/verify.mjs",
-    "tools:check": "node scripts/check-tools.mjs"
+    "tools:check": "node scripts/check-tools.mjs",
+    "links:check": "node scripts/check-links.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.0",

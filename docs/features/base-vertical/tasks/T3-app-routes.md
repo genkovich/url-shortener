@@ -13,7 +13,7 @@ status: "done"
 # T3 — App routes
 
 ## Why
-Route layer that exposes the domain functions to the frontend ([[../sad.md]] §5–6). Backs AC-01/02/03.
+Route layer that exposes the domain functions to the frontend ([sad.md](../sad.md) §5–6). Backs AC-01/02/03.
 
 ## What
 `createApp(db)` wires the routes over the domain layer: create a short link from a submitted url, follow a code to redirect to its original and count the visit, list all links, and report stats for one code (reported as not found when the code is unknown). The domain-specific routes are matched ahead of the catch-all follow route.
