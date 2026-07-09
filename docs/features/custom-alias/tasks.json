@@ -1,0 +1,75 @@
+{
+  "slug": "custom-alias",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Domain: validateAlias guard (charset, length, reserved names)",
+      "layer": "domain",
+      "wave": 1,
+      "priority": "Must",
+      "estimate": "S",
+      "deps": [],
+      "blocks": ["T2"],
+      "acs": ["AC-03", "AC-04"],
+      "dod": "validateAlias(raw) returns the alias verbatim or throws AliasError with reason 'invalid alias' | 'reserved alias'; charset ^[A-Za-z0-9_-]{3,32}$; reserved names compared case-insensitively; pure, no db",
+      "files_hint": ["src/shorten.js"],
+      "context_budget": "~2500 tokens"
+    },
+    {
+      "id": "T2",
+      "title": "Domain: createLink claim branch — alias becomes the code, 409 on collision",
+      "layer": "domain",
+      "wave": 1,
+      "priority": "Must",
+      "estimate": "S",
+      "deps": ["T1"],
+      "blocks": ["T3"],
+      "acs": ["AC-01", "AC-02", "AC-05", "AC-07"],
+      "dod": "createLink(db, url, { alias }) validates the alias, refuses a taken one with AliasError reason 'alias taken' and writes nothing, otherwise inserts with code = alias; without an alias the generate-and-retry branch and URL dedup are unchanged",
+      "files_hint": ["src/shorten.js"],
+      "context_budget": "~2500 tokens"
+    },
+    {
+      "id": "T3",
+      "title": "App: map alias outcomes to 201 / 400 / 409",
+      "layer": "app",
+      "wave": 2,
+      "priority": "Must",
+      "estimate": "S",
+      "deps": ["T2"],
+      "blocks": ["T4", "T5"],
+      "acs": ["AC-01", "AC-02", "AC-03", "AC-04", "AC-05", "AC-06"],
+      "dod": "POST /api/shorten reads an optional alias and maps AliasError to 400 (invalid/reserved) or 409 (taken); a created aliased link follows, lists and reports stats exactly like a generated one; existing tests stay green",
+      "files_hint": ["src/app.js"],
+      "context_budget": "~2500 tokens"
+    },
+    {
+      "id": "T4",
+      "title": "Frontend: optional alias input beside the URL field",
+      "layer": "ui",
+      "wave": 3,
+      "priority": "Should",
+      "estimate": "S",
+      "deps": ["T3"],
+      "blocks": [],
+      "acs": ["AC-01", "AC-02", "AC-03", "AC-05"],
+      "dod": "an optional alias input is sent only when non-empty (the key is omitted, never sent as an empty string); the server's error string is rendered inline; no alias rule is duplicated in the browser; proven by tests/e2e/alias.spec.js",
+      "files_hint": ["src/public/app.js", "src/public/index.html", "src/public/style.css", "tests/e2e/alias.spec.js"],
+      "context_budget": "~2000 tokens"
+    },
+    {
+      "id": "T5",
+      "title": "Tests: unit + integration for AC-01..07",
+      "layer": "tests",
+      "wave": 3,
+      "priority": "Must",
+      "estimate": "S",
+      "deps": ["T3"],
+      "blocks": [],
+      "acs": ["AC-01", "AC-02", "AC-03", "AC-04", "AC-05", "AC-06", "AC-07"],
+      "dod": "npm run test:fast green; boundaries 3/32 asserted from both sides, HEALTHZ refused in upper case, a taken alias leaves the existing row byte-identical, and an alias bypasses URL dedup",
+      "files_hint": ["tests/unit/alias.test.js", "tests/integration/alias.test.js"],
+      "context_budget": "~3000 tokens"
+    }
+  ]
+}

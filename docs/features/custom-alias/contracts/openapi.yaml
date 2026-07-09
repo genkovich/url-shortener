@@ -1,0 +1,75 @@
+openapi: 3.1.0
+info:
+  title: url-shortener — custom-alias (delta over base-vertical)
+  version: 0.2.0
+  description: >
+    Adds an optional `alias` to link creation. When supplied, the alias becomes the link's
+    code verbatim. A malformed or reserved alias is refused (400); an alias that is already
+    a code is refused as a conflict (409). Only the changed operation is shown; the
+    base-vertical contract otherwise stands.
+security: []
+paths:
+  /api/shorten:
+    post:
+      summary: Create a short link, optionally under a chosen alias
+      operationId: createLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShortenRequest'
+      responses:
+        '201':
+          description: Link created — `code` equals the alias when one was supplied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Link'
+        '400':
+          description: >
+            Invalid request. `error` is `invalid alias` when the alias is malformed,
+            or `reserved alias` when it would shadow a service path.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: The alias is already the code of an existing link. Nothing was written.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    ShortenRequest:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        url:
+          type: string
+        alias:
+          type: [string, "null"]
+          pattern: '^[A-Za-z0-9_-]{3,32}$'
+          description: >
+            Optional. Becomes the link's code verbatim. Case-sensitive for uniqueness
+            (`Foo` and `foo` are two links) but compared case-insensitively against the
+            reserved names `api`, `healthz`, `metrics`. When omitted or null, a random
+            7-character base62 code is generated and URL de-duplication applies.
+    Link:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        short_url:
+          type: string
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: string
+          enum: [invalid alias, reserved alias, alias taken]
