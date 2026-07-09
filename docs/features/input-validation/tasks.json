@@ -1,0 +1,50 @@
+{
+  "slug": "input-validation",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Domain: validateUrl guard (trim, non-empty, scheme allowlist, host, length)",
+      "layer": "domain",
+      "deps": [],
+      "acs": ["AC-02", "AC-03", "AC-04", "AC-05", "AC-06"],
+      "dod": "validateUrl(raw) returns normalized url or throws typed validation error; pure, unit-testable; first red→green target = empty url (AC-02)",
+      "files_hint": ["src/shorten.js"]
+    },
+    {
+      "id": "T2",
+      "title": "Domain: dedup — reuse existing code for an already-stored normalized url",
+      "layer": "domain",
+      "deps": ["T1"],
+      "acs": ["AC-07"],
+      "dod": "createLink looks up the normalized url; if present returns existing code and inserts nothing",
+      "files_hint": ["src/shorten.js"]
+    },
+    {
+      "id": "T3",
+      "title": "App: 400 on invalid, 200 on dedup, 201 on new",
+      "layer": "app",
+      "deps": ["T2"],
+      "acs": ["AC-01", "AC-02", "AC-03", "AC-04", "AC-05", "AC-06", "AC-07"],
+      "dod": "POST /api/shorten maps validation error to 400 {error}, dedup hit to 200 {code}, new create to 201; seed tests (tests/unit/shorten.test.js, tests/integration/shorten.test.js) stay green",
+      "files_hint": ["src/app.js"]
+    },
+    {
+      "id": "T4",
+      "title": "Обморда: inline validation error under the form",
+      "layer": "ui",
+      "deps": ["T3"],
+      "acs": ["AC-02"],
+      "dod": "a 400 shows the error message inline instead of a silent failure",
+      "files_hint": ["src/public/app.js", "src/public/index.html", "src/public/style.css"]
+    },
+    {
+      "id": "T5",
+      "title": "Tests: unit + integration for AC-01..07",
+      "layer": "tests",
+      "deps": ["T3"],
+      "acs": ["AC-01", "AC-02", "AC-03", "AC-04", "AC-05", "AC-06", "AC-07"],
+      "dod": "npm run test:fast green; empty/scheme/malformed/too-long/trim/dedup all covered",
+      "files_hint": ["tests/unit/validation.test.js", "tests/integration/validation.test.js"]
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "slug": "base-vertical",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Create links table + openDb/migrate",
+      "layer": "migration",
+      "deps": [],
+      "acs": ["AC-01"],
+      "dod": "openDb(':memory:') creates links(code,url,created_at,clicks)",
+      "files_hint": ["src/db.js"]
+    },
+    {
+      "id": "T2",
+      "title": "Domain: generateCode, createLink, resolveLink, listLinks, getStats",
+      "layer": "domain",
+      "deps": ["T1"],
+      "acs": ["AC-01", "AC-02", "AC-04"],
+      "dod": "createLink returns 7-char code; resolveLink increments clicks; stable url",
+      "files_hint": ["src/shorten.js"]
+    },
+    {
+      "id": "T3",
+      "title": "App routes: POST /api/shorten, GET /:code, /api/links, /api/stats/:code",
+      "layer": "app",
+      "deps": ["T2"],
+      "acs": ["AC-01", "AC-02", "AC-03"],
+      "dod": "routes return documented status codes; /api/* above catch-all /:code",
+      "files_hint": ["src/app.js"]
+    },
+    {
+      "id": "T4",
+      "title": "Обморда: form + result + links table",
+      "layer": "ui",
+      "deps": ["T3"],
+      "acs": ["AC-01", "AC-03"],
+      "dod": "page renders, submits form, lists links",
+      "files_hint": ["src/public/index.html", "src/public/app.js", "src/public/style.css"]
+    },
+    {
+      "id": "T5",
+      "title": "Seed unit tests (supertest) for AC-01..04",
+      "layer": "tests",
+      "deps": ["T3"],
+      "acs": ["AC-01", "AC-02", "AC-03", "AC-04"],
+      "dod": "npm run test:fast green; each AC covered",
+      "files_hint": ["tests/unit/shorten.test.js", "tests/integration/shorten.test.js"]
+    }
+  ]
+}

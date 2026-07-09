@@ -1,0 +1,66 @@
+openapi: 3.1.0
+info:
+  title: url-shortener — input-validation (delta over base-vertical)
+  version: 0.2.0
+  description: >
+    Adds validation and dedup to link creation. A well-formed http/https URL still
+    creates a link (201); an already-stored URL returns its existing code (200);
+    empty / unsafe-scheme / malformed / oversized input is refused (400).
+    Only the changed operation is shown; base-vertical contract otherwise stands.
+security: []
+paths:
+  /api/shorten:
+    post:
+      summary: Create a short link (now validated and de-duplicated)
+      operationId: createLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShortenRequest'
+      responses:
+        '201':
+          description: New link created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Link'
+        '200':
+          description: URL already stored — existing code returned (dedup)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Link'
+        '400':
+          description: Invalid input (empty, unsafe scheme, malformed, or too long)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    ShortenRequest:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        url:
+          type: string
+          maxLength: 2048
+          description: An http/https URL. Surrounding whitespace is trimmed.
+    Link:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        short_url:
+          type: string
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: string

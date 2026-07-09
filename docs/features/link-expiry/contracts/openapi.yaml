@@ -1,0 +1,84 @@
+openapi: 3.1.0
+info:
+  title: url-shortener — link-expiry (delta over base-vertical)
+  version: 0.2.0
+  description: >
+    Adds an optional lifetime to link creation and a "gone" outcome when following
+    an expired link. Only the changed operations are shown; base-vertical contract otherwise stands.
+security: []
+paths:
+  /api/shorten:
+    post:
+      summary: Create a short link (now accepts an optional lifetime)
+      operationId: createLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShortenRequest'
+      responses:
+        '201':
+          description: Link created (carries its expiry moment)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Link'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /{code}:
+    get:
+      summary: Follow a short code
+      operationId: followCode
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect (link still within its lifetime)
+        '404':
+          description: Unknown code
+        '410':
+          description: Link has expired — gone, not redirected
+components:
+  schemas:
+    ShortenRequest:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        url:
+          type: string
+        ttl_days:
+          type: [integer, "null"]
+          description: Optional lifetime in days; when omitted the resolved default applies.
+    Link:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        url:
+          type: string
+        short_url:
+          type: string
+        created_at:
+          type: integer
+        expires_at:
+          type: [integer, "null"]
+        clicks:
+          type: integer
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: string

@@ -1,0 +1,42 @@
+{
+  "name": "url-shortener",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "URL shortener on Node/Express/SQLite with a three-level test suite and a spec-driven backlog.",
+  "license": "MIT",
+  "author": "Kyrylo Genkovych <genkovich@syneforge.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/genkovich/url-shortener.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node src/server.js",
+    "start": "node src/server.js",
+    "lint": "eslint .",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "test:fast": "vitest run",
+    "test:e2e": "playwright test",
+    "test": "npm run test:fast && npm run test:e2e",
+    "test:watch": "vitest",
+    "gate": "npm run lint && npm test",
+    "doctor": "node scripts/doctor.mjs",
+    "verify": "node scripts/verify.mjs",
+    "tools:check": "node scripts/check-tools.mjs"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.0",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@playwright/test": "^1.50.0",
+    "eslint": "^9.18.0",
+    "globals": "^15.14.0",
+    "supertest": "^7.0.0",
+    "vitest": "^3.0.0"
+  }
+}

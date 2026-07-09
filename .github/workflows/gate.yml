@@ -1,0 +1,51 @@
+name: gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # Ворота ганяємо на трьох ОС і двох Node. Не заради краси матриці: наші скрипти спавнили
+  # `npm` без `shell`, а на Windows `npm` — це `npm.cmd`, і такий спавн НЕ падає помітно —
+  # він просто не стартує. Ворота, які тихо не запустились, гірші за їх відсутність: вони
+  # показують зелене. Ця матриця — єдине місце, де така тиша стає чутною.
+  gate:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [20, 22]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      # Браузер тягнеться довго, і Playwright на кожній ОС свій. Ми перевіряємо, що ворота
+      # ЗАПУСКАЮТЬСЯ скрізь, а не що браузер поводиться однаково скрізь — це різні твердження.
+      - name: Install Playwright browser
+        if: matrix.os == 'ubuntu-latest'
+        run: npx playwright install --with-deps chromium
+
+      - name: verify — усі детерміновані ворота (з e2e)
+        if: matrix.os == 'ubuntu-latest'
+        run: npm run verify
+
+      - name: verify — усі детерміновані ворота (без e2e)
+        if: matrix.os != 'ubuntu-latest'
+        run: npm run verify -- --skip-e2e
+
+      - if: failure() && matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-node${{ matrix.node }}
+          path: playwright-report/
+          retention-days: 7

@@ -1,0 +1,14 @@
+---
+description: Project rules for url-shortener
+alwaysApply: true
+---
+
+Single source of truth for this repo is **AGENTS.md** (repo root) — read it first. The same
+file is shared by Claude Code, Codex, Copilot and Antigravity.
+
+Skills are vendored — no plugin to install. The SDD skills live under `.cursor/skills/sdd-implement/`
+(type `/` and pick `sdd-…`). The implementation/TDD skill is **`sdd-implement`**
+(red → green → refactor → gate; spawns test-author / implementer / reviewer).
+
+The golden rules — thin routes, domain logic in `src/shorten.js`, every task test-first, `npm run test:fast`
+green after each change — live in AGENTS.md (single source of truth for all commands). Follow them there.

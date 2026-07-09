@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>URL Shortener</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1>🔗 URL Shortener</h1>
+    <p class="sub">Скороти довгий URL, поділись коротким, дивись кліки. Решта фіч — у беклозі <b>docs/roadmap.md</b>.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <form id="form">
+        <input id="url" type="text" placeholder="Встав довгий URL…" autocomplete="off" />
+        <button type="submit">Скоротити</button>
+      </form>
+      <div id="result" class="result hidden">
+        <a id="short" href="#" target="_blank"></a>
+        <button id="copy" type="button">копіювати</button>
+      </div>
+      <p id="error" class="error hidden"></p>
+    </section>
+
+    <section class="card">
+      <h2>Мої лінки</h2>
+      <table id="links">
+        <thead>
+          <tr><th>Код</th><th>Оригінал</th><th>Кліки</th><th>Створено</th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <p id="empty" class="muted">Ще порожньо. Скороти перший лінк.</p>
+    </section>
+  </main>
+
+  <script src="/app.js" type="module"></script>
+</body>
+</html>
