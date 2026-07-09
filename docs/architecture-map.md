@@ -1,8 +1,8 @@
 ---
 status: current
 mode: greenfield-bootstrap
-updated_at: "2026-07-08"
-reflects_commit: "d6ab40e"
+updated_at: "2026-07-09"
+reflects_commit: "604f0b8"
 language: javascript
 build_cmd: "npm run dev"
 test_cmd: "npm run test:fast"
@@ -16,7 +16,7 @@ frontend: "vanilla (static HTML/CSS/JS in src/public)"
 > Single source of truth for conventions each feature must match. Read first before any task.
 
 ## Stack
-Node (ESM, `type: module`) · Express 4 · Vitest (unit + integration, two projects) + supertest (integration HTTP seam) · Playwright (E2E) · SQLite via `better-sqlite3`. No build step; run with `node`. Lint: ESLint flat config (`eslint.config.js`). CI: GitHub Actions (`.github/workflows/gate.yml`) runs `npm run gate` on node 20.
+Node (ESM, `type: module`) · Express 4 · Vitest (unit + integration, two projects) + supertest (integration HTTP seam) · Playwright (E2E) · SQLite via `better-sqlite3`. No build step; run with `node`. Lint: ESLint flat config (`eslint.config.js`). CI: GitHub Actions (`.github/workflows/gate.yml`) runs `npm run verify` across Linux/macOS/Windows × node 20/22.
 
 ## C4 — system as it is
 

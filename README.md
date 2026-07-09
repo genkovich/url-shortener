@@ -102,11 +102,7 @@ tasks/tracker.md      статуси
 
 Готові пакети: [`base-vertical`](docs/features/base-vertical/) (shipped, worked example) ·
 [`input-validation`](docs/features/input-validation/) ·
-[`link-expiry`](docs/features/link-expiry/) ·
-[`custom-alias`](docs/features/custom-alias/) ·
-[`qr-codes`](docs/features/qr-codes/) ·
-[`rate-limiting`](docs/features/rate-limiting/) ·
-[`bulk-and-delete`](docs/features/bulk-and-delete/).
+[`link-expiry`](docs/features/link-expiry/).
 
 Черга і залежності — [`docs/roadmap.md`](docs/roadmap.md). Конвенції, яких мусить триматися
 кожна фіча, — [`docs/architecture-map.md`](docs/architecture-map.md).
