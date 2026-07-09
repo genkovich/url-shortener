@@ -70,6 +70,7 @@ Vanilla static page `src/public/` — CSS variables theme in `style.css`. Reuse 
 - No auth (single-user toy); AC "authorization" type is N/A for most features — note explicitly.
 - No rate-limit yet.
 - SQLite single-file — not for concurrent prod load (out of scope).
+- **Stored URLs are unvalidated and rendered into `innerHTML`.** `POST /api/shorten` accepts any string (feature `input-validation` closes the write side), and `loadLinks()` in `src/public/app.js` interpolates the stored `url` straight into a row template. Until both ends are fixed, a stored `javascript:` scheme or markup payload reaches the DOM. The write side is scheduled; the read side is not — see `base-vertical` T4 edge cases.
 
 ## Reconciliation with the authored architecture doc
 This map was authored at bootstrap (greenfield). Update `reflects_commit` when structure changes.

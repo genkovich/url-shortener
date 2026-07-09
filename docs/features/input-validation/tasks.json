@@ -53,8 +53,8 @@
       "deps": ["T3"],
       "blocks": [],
       "acs": ["AC-02"],
-      "dod": "a 400 renders its `error` string in #error under the form instead of failing silently; the next successful submit clears it",
-      "files_hint": ["src/public/app.js", "src/public/index.html", "src/public/style.css"],
+      "dod": "a 400 renders its `error` string in #error under the form instead of failing silently; the next successful submit clears it; proven by tests/e2e/validation.spec.js",
+      "files_hint": ["src/public/app.js", "src/public/index.html", "src/public/style.css", "tests/e2e/validation.spec.js"],
       "context_budget": "~2000 tokens"
     },
     {

@@ -60,6 +60,7 @@ Constants introduced in src/shorten.js:
   ALLOWED_SCHEMES = ['http:', 'https:']    -- ADR-0001; compared to URL.protocol
 
 Order of checks (first failure wins — this order is the contract):
+  0. not a string → 'url required'     -- the route hands us req.body?.url, which may be undefined
   1. trim
   2. empty        → 'url required'
   3. length > MAX → 'url too long'
@@ -89,7 +90,7 @@ in `docs/architecture-map.md`.
 ## Acceptance criteria (GWT)
 
 - [ ] **AC-t1-1 (happy path, normalized — AC-06):** Given `"  https://example.com/a  "`, when `validateUrl` is called, then it returns exactly `"https://example.com/a"` — trimmed, and otherwise byte-identical to the input.
-- [ ] **AC-t1-2 (empty — AC-02):** Given `""` or `"   "`, when `validateUrl` is called, then it throws `ValidationError` with `reason === 'url required'`.
+- [ ] **AC-t1-2 (empty — AC-02):** Given `""`, `"   "`, `undefined` or a non-string (`42`, `{}`, `null`), when `validateUrl` is called, then it throws `ValidationError` with `reason === 'url required'`.
 - [ ] **AC-t1-3 (unsafe scheme — AC-03):** Given `"javascript:alert(1)"`, `"data:text/html,x"`, `"file:///etc/passwd"` or `"ftp://host/f"`, when `validateUrl` is called, then it throws `ValidationError` with `reason === 'unsafe scheme'`.
 - [ ] **AC-t1-4 (malformed — AC-04):** Given `"not a url"` or `"http://"`, when `validateUrl` is called, then it throws `ValidationError` with `reason === 'malformed url'`.
 - [ ] **AC-t1-5 (too long — AC-05):** Given a string of 2049 characters, when `validateUrl` is called, then it throws `ValidationError` with `reason === 'url too long'`; given a valid URL of exactly 2048 characters, it returns that URL.
@@ -108,6 +109,7 @@ in `docs/architecture-map.md`.
 
 | Case | Behaviour |
 |---|---|
+| `undefined` · `null` · `42` · `{}` | `url required`. Check 0 exists because the route passes `req.body?.url` straight through: a missing JSON field would otherwise reach `.trim()` and blow up as an untyped `TypeError`, which the error middleware turns into a **500**. A missing field is a client error, not a server one. |
 | `"  https://x  "` (padded) | Trimmed and accepted. `new URL()` trims on its own — trimming ourselves is what makes the **returned** value normalized, which T2's dedup depends on. |
 | Exactly 2048 chars | Accepted. 2049 → `url too long`. Length is measured **after** trim, so `" " + 2048 chars + " "` is accepted. |
 | `"HTTP://EXAMPLE.COM"` | Accepted, returned **unchanged**. `URL.protocol` is already lowercase, so the allowlist matches; but we return the raw trimmed string, because lowercasing the host is an explicit non-goal (spec §3). Consequence: `HTTP://X` and `http://x` become two different links under T2's dedup. Acceptable — documented, not fixed. |

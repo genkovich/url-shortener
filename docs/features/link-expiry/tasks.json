@@ -5,46 +5,71 @@
       "id": "T1",
       "title": "Migration: add expires_at column to links",
       "layer": "migration",
+      "wave": 1,
+      "priority": "Must",
+      "estimate": "S",
       "deps": [],
+      "blocks": ["T2"],
       "acs": ["AC-01", "AC-04"],
-      "dod": "openDb applies expires_at; existing rows keep resolving",
-      "files_hint": ["src/db.js", "docs/features/link-expiry/migrations/"]
+      "dod": "migrate() adds expires_at guarded by PRAGMA table_info (ALTER TABLE ADD COLUMN is not idempotent in SQLite); the base CREATE TABLE is untouched; pre-migration rows survive with expires_at NULL and still resolve",
+      "files_hint": ["src/db.js", "docs/features/link-expiry/migrations/"],
+      "context_budget": "~2000 tokens"
     },
     {
       "id": "T2",
       "title": "Domain: resolve default TTL + compute expired state",
       "layer": "domain",
+      "wave": 2,
+      "priority": "Must",
+      "estimate": "M",
       "deps": ["T1"],
-      "acs": ["AC-01", "AC-03", "AC-04"],
-      "dod": "createLink sets expires_at (given ttl or default); isExpired(link, now) correct at boundary",
-      "files_hint": ["src/shorten.js"]
+      "blocks": ["T3"],
+      "acs": ["AC-01", "AC-03", "AC-04", "AC-05"],
+      "dod": "BLOCKED on spec §8 (default TTL) — ask the human first. Then: createLink writes expires_at from a given or default ttl; isExpired(link, now) is correct at the boundary (now >= expires_at) and treats null as non-expiring; resolveLink and listLinks return `expired` and never increment clicks on an expired link",
+      "files_hint": ["src/shorten.js"],
+      "context_budget": "~3000 tokens"
     },
     {
       "id": "T3",
-      "title": "App: 410 on expired follow; accept ttl_days on shorten",
+      "title": "App: refuse expired follows as gone; accept a lifetime on create",
       "layer": "app",
+      "wave": 3,
+      "priority": "Must",
+      "estimate": "S",
       "deps": ["T2"],
+      "blocks": ["T4", "T5"],
       "acs": ["AC-02", "AC-03"],
-      "dod": "GET /:code returns 410 when expired, 302 when valid; clicks not incremented on 410",
-      "files_hint": ["src/app.js"]
+      "dod": "GET /:code returns 410 { error: 'gone' } when expired and 302 when valid, with no click counted on the 410; POST /api/shorten accepts a positive-integer ttl_days and rejects anything else with 400 { error: 'invalid ttl' }",
+      "files_hint": ["src/app.js"],
+      "context_budget": "~2500 tokens"
     },
     {
       "id": "T4",
-      "title": "Обморда: expired/active badge in links table",
+      "title": "Frontend: expired/active badge in links table",
       "layer": "ui",
+      "wave": 4,
+      "priority": "Should",
+      "estimate": "S",
       "deps": ["T3"],
+      "blocks": [],
       "acs": ["AC-05"],
-      "dod": "list shows status matching redirect behaviour",
-      "files_hint": ["src/public/app.js", "src/public/index.html", "src/public/style.css"]
+      "dod": "each listed link shows an expired/active badge read verbatim from the server's `expired` field; no expiry arithmetic in src/public/; proven by tests/e2e/expiry.spec.js",
+      "files_hint": ["src/public/app.js", "src/public/index.html", "src/public/style.css", "tests/e2e/expiry.spec.js"],
+      "context_budget": "~2000 tokens"
     },
     {
       "id": "T5",
       "title": "Tests: unit + integration for AC-01..05",
       "layer": "tests",
+      "wave": 4,
+      "priority": "Must",
+      "estimate": "M",
       "deps": ["T3"],
+      "blocks": [],
       "acs": ["AC-01", "AC-02", "AC-03", "AC-04", "AC-05"],
-      "dod": "npm run test:fast green; boundary + legacy-null covered",
-      "files_hint": ["tests/unit/expiry.test.js", "tests/integration/expiry.test.js"]
+      "dod": "npm run test:fast green; the boundary is asserted from both sides, the legacy expires_at NULL row is exercised, an expired follow provably counts no click, and no test sleeps or touches the real process.env",
+      "files_hint": ["tests/unit/expiry.test.js", "tests/integration/expiry.test.js"],
+      "context_budget": "~3000 tokens"
     }
   ]
 }

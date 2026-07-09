@@ -5,46 +5,71 @@
       "id": "T1",
       "title": "Create links table + openDb/migrate",
       "layer": "migration",
+      "wave": 1,
+      "priority": "Must",
+      "estimate": "S",
       "deps": [],
+      "blocks": ["T2"],
       "acs": ["AC-01"],
-      "dod": "openDb(':memory:') creates links(code,url,created_at,clicks)",
-      "files_hint": ["src/db.js"]
+      "dod": "openDb(':memory:') creates links(code,url,created_at,clicks) with no separate migrate call; a fresh clone with no data/ directory opens successfully",
+      "files_hint": ["src/db.js"],
+      "context_budget": "~1500 tokens"
     },
     {
       "id": "T2",
       "title": "Domain: generateCode, createLink, resolveLink, listLinks, getStats",
       "layer": "domain",
+      "wave": 2,
+      "priority": "Must",
+      "estimate": "S",
       "deps": ["T1"],
+      "blocks": ["T3"],
       "acs": ["AC-01", "AC-02", "AC-04"],
-      "dod": "createLink returns 7-char code; resolveLink increments clicks; stable url",
-      "files_hint": ["src/shorten.js"]
+      "dod": "createLink returns a 7-char base62 code and regenerates on collision; resolveLink increments clicks and returns null on a miss; no express import",
+      "files_hint": ["src/shorten.js"],
+      "context_budget": "~2000 tokens"
     },
     {
       "id": "T3",
       "title": "App routes: POST /api/shorten, GET /:code, /api/links, /api/stats/:code",
       "layer": "app",
+      "wave": 3,
+      "priority": "Must",
+      "estimate": "S",
       "deps": ["T2"],
+      "blocks": ["T4", "T5"],
       "acs": ["AC-01", "AC-02", "AC-03"],
-      "dod": "routes return documented status codes; /api/* above catch-all /:code",
-      "files_hint": ["src/app.js"]
+      "dod": "routes return the documented status codes; every /api/* route is declared above the catch-all /:code; a malformed JSON body stays a 400, not a 500",
+      "files_hint": ["src/app.js"],
+      "context_budget": "~2500 tokens"
     },
     {
       "id": "T4",
-      "title": "Обморда: form + result + links table",
+      "title": "Frontend: form + result + links table",
       "layer": "ui",
+      "wave": 4,
+      "priority": "Must",
+      "estimate": "S",
       "deps": ["T3"],
-      "acs": ["AC-01", "AC-03"],
-      "dod": "page renders, submits form, lists links",
-      "files_hint": ["src/public/index.html", "src/public/app.js", "src/public/style.css"]
+      "blocks": [],
+      "acs": ["AC-01", "AC-05"],
+      "dod": "the page renders, the form submits a url and shows the short handle, and existing links appear in the list with their click counts; no framework, no dependency",
+      "files_hint": ["src/public/index.html", "src/public/app.js", "src/public/style.css"],
+      "context_budget": "~2000 tokens"
     },
     {
       "id": "T5",
-      "title": "Seed unit tests (supertest) for AC-01..04",
+      "title": "Seed test suite: unit + integration + e2e smoke (AC-01..05)",
       "layer": "tests",
+      "wave": 4,
+      "priority": "Must",
+      "estimate": "S",
       "deps": ["T3"],
-      "acs": ["AC-01", "AC-02", "AC-03", "AC-04"],
-      "dod": "npm run test:fast green; each AC covered",
-      "files_hint": ["tests/unit/shorten.test.js", "tests/integration/shorten.test.js"]
+      "blocks": [],
+      "acs": ["AC-01", "AC-02", "AC-03", "AC-04", "AC-05"],
+      "dod": "npm run test:fast green (unit + integration over :memory:) and npm run test:e2e green (one browser path against its own file DB); no test touches the network",
+      "files_hint": ["tests/unit/shorten.test.js", "tests/integration/shorten.test.js", "tests/e2e/smoke.spec.js"],
+      "context_budget": "~2500 tokens"
     }
   ]
 }
