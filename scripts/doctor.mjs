@@ -86,13 +86,13 @@ const TOOLS = [
     critical: true,
     fix:
       process.platform === 'darwin'
-        ? 'xcode-select --install'
+        ? 'brew install git  (якщо brew ще немає — виконай macOS-підготовку з README.md)'
         : 'встанови git пакетним менеджером (напр. `apt install git`)',
   },
-  { label: 'claude', cmd: 'claude', args: ['--version'], hint: '(опційно: скіл implement + субагенти)' },
-  { label: 'codex', cmd: 'codex', args: ['--version'], hint: '(опційно: скіл sdd-implement)' },
-  { label: 'copilot', cmd: 'copilot', args: ['--version'], hint: '(опційно: AGENT_CMD для лупа)' },
-  { label: 'cursor-agent', cmd: 'cursor-agent', args: ['--version'], hint: '(опційно: AGENT_CMD для лупа)' },
+  { label: 'claude', cmd: 'claude', args: ['--version'], hint: '(опційно: implement, loop та behavioral eval)' },
+  { label: 'codex', cmd: 'codex', args: ['--version'], hint: '(опційно: implement, loop та behavioral eval)' },
+  { label: 'copilot', cmd: 'copilot', args: ['--version'], hint: '(опційно: loop та behavioral eval)' },
+  { label: 'cursor-agent', cmd: 'cursor-agent', args: ['--version'], hint: '(опційно: implement, loop та behavioral eval)' },
 ];
 
 const rows = [];

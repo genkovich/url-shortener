@@ -32,11 +32,6 @@ Soft dependencies are deliberately absent from the column, because they do not b
 answers `410` for an expired link **only if** `link-expiry` has shipped. Without it that branch
 does not exist, and the feature is complete regardless.
 
-## Good first tasks
-Six small, real defects in code that already ships, each with a marker at the offending line and
-its own acceptance criteria: [good-first-tasks.md](./good-first-tasks.md). They are notes to self,
-not queue items — take one whenever, by hand.
-
 ## Later
 - Click analytics beyond a counter.
 - Metrics endpoint hardening.

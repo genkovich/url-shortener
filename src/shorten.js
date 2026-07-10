@@ -37,7 +37,8 @@ export function resolveLink(db, code) {
 }
 
 export function listLinks(db) {
-  // TODO(good-first-task): при однаковій мілісекунді порядок невизначений — docs/good-first-tasks.md#stable-list-order
+  // TODO: listLinks() не має unit-тесту на порожню базу
+  // TODO: при однаковій мілісекунді порядок невизначений
   return db.prepare('SELECT * FROM links ORDER BY created_at DESC').all();
 }
 

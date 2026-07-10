@@ -22,7 +22,9 @@ const REPO = repoRoot(import.meta.url);
 const rel = (path) => relative(REPO, path);
 const v = new Verdict('links:check');
 
-const SKIP_DIRS = new Set(['node_modules', '.git', 'playwright-report', 'test-results']);
+// `.worktrees/` містить окремі checkout-и. Кожен із них проходить власні ворота; батьківський
+// link-check не повинен приписувати собі документацію з іншої гілки.
+const SKIP_DIRS = new Set(['node_modules', '.git', '.worktrees', 'playwright-report', 'test-results']);
 
 // ⚠ Перший виняток. Шаблони лежать у docs/_templates/, а їхні відносні шляхи (`../spec.md`)
 // правильні для МІСЦЯ ПРИЗНАЧЕННЯ — docs/features/<slug>/tasks/, куди їх копіюють. На місці

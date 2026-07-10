@@ -3,7 +3,9 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['node_modules/**', 'data/**', 'playwright-report/**', 'test-results/**'],
+    // Вкладені git worktree — окремі checkout-и зі своїм gate. Сканувати їх із батьківського
+    // дерева означає lint-ити той самий репозиторій удруге й змішувати результати двох гілок.
+    ignores: ['node_modules/**', 'data/**', 'playwright-report/**', 'test-results/**', '.worktrees/**'],
   },
   js.configs.recommended,
   {

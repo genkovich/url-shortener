@@ -43,7 +43,7 @@ export function createApp(db) {
   app.get('/api/qr/:code', notImplemented('qr-codes'));
   app.delete('/api/:code', notImplemented('bulk-and-delete'));
 
-  // TODO(good-first-task): невідомий шлях під /api віддає HTML-сторінку Express, а не { error } — docs/good-first-tasks.md#api-json-404
+  // TODO: невідомий шлях під /api віддає HTML-сторінку Express, а не { error }
 
   // --- Redirect (тримати ПІСЛЯ /api/*, щоб не перехоплював) ---
   app.get('/:code', (req, res) => {

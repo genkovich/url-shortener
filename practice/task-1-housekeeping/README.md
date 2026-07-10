@@ -1,157 +1,234 @@
-# Задача 1 — Housekeeping: цикл шукає роботу сам
+# Практика 1 — збираємо абстрактний housekeeping loop
 
-Зазвичай тригер приносить завдання: прийшов тикет, прийшов запит, прийшов промпт. Housekeeping-цикл
-влаштований інакше. Він прокидається за розкладом **без завдання** і сам питає репозиторій, чи є
-робота. Ми пишемо цей цикл: маркер у коді → агент → ворота → коміт або відкат.
+Housekeeping не отримує конкретного тикета. На кожному проході Claude сам читає репозиторій,
+знаходить одну малу корисну роботу, виконує її та залишає локальний коміт.
 
-Стеля автономії — коміт у локальну гілку. Ані `git push`, ані `gh pr create`.
+Джерела роботи, у порядку пріоритету:
 
----
+1. червоні детерміновані ворота;
+2. звичайні `TODO` і `FIXME` у коді;
+3. відкриті GitHub issues із label `housekeeping`, якщо налаштований `gh`;
+4. невеликий дефект або спрощення, яке можна довести тестом чи видаленням реальної дубляції.
 
-## Крок 1 — підготувати ґрунт
+Runner не вирішує, **що** покращувати. Він лише тримає межі:
+
+```text
+Claude обирає одну задачу → один локальний commit → runner перевіряє → sleep → знову
+```
+
+На воркшопі запустимо рівно один прохід через `--once`. Без цього прапорця цикл працює до
+`Ctrl+C` або трьох провалів поспіль. Він викликає модель і може витрачати гроші без участі
+людини; запускайте лише після дозволу ведучого. `git push` і PR заборонені.
+
+## 1. Підготуйте гілку
 
 ```bash
-git checkout -b chore/housekeeping
+git status --short
+npm run verify
+git switch -c chore/housekeeping
+git grep -nE "TODO|FIXME" -- src
 ```
 
-Посади один маркер у `src/shorten.js`, рядком вище за `return db.prepare(...)` у функції `listLinks`:
+Перша команда не має нічого надрукувати. Якщо дерево брудне або гілка вже існує, зупиніться й
+покличте ведучого. У репозиторії вже лежать звичайні `TODO`, тому перший прохід має стартові
+кандидати без окремої категорії маркерів.
 
-```js
-// TODO(housekeeping): listLinks() без тесту на порожню базу
-```
+## 2. Прочитайте політику однієї ітерації
 
-Закоміть його: `git add src/shorten.js && git commit -m 'chore: посіяти маркер'`.
+Відкрийте [PROMPT.md](./PROMPT.md). Це спільна політика для різних
+рушіїв:
 
-**Видно:** `git status` чистий, а `grep -rnF 'TODO(housekeeping)' src` дає рівно один рядок.
+- скрипта, який ми зараз складемо;
+- вбудованого Claude Code `/loop`.
+- будь-якого headless-агента (без інтерактивного діалогу), чию команду передано через `AGENT_CMD`.
 
----
+Промпт наказує обрати рівно одну малу задачу, не брати roadmap-фічі, пройти TDD, запустити
+ворота й зробити один локальний коміт. Якщо безпечної роботи немає — Claude нічого не змінює.
 
-## Крок 2 — створити `housekeeping.mjs`
+## 3. Створіть адаптер команд
 
-Файл лягає в `practice/task-1-housekeeping/housekeeping.mjs`.
+Створіть порожній `practice/task-1-housekeeping/housekeeping.mjs` і додайте:
 
 ```js
 #!/usr/bin/env node
-// housekeeping.mjs — цикл, який прокидається без завдання і шукає роботу сам.
-// Запуск із кореня репо: node practice/task-1-housekeeping/housekeeping.mjs
 
-import { spawnSync } from 'node:child_process';
-import { appendFileSync } from 'node:fs';
+import process from 'node:process';
+import console from 'node:console';
+import { readFileSync } from 'node:fs';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { git, run } from '../../scripts/lib.mjs';
 
-const MARKER = 'TODO(housekeeping)';
-const MAX_ITER = 5;      // скільки разів пробуємо за запуск
-const MAX_FIXES = 2;     // скільки комітів дозволено за запуск
-const K_FAILURES = 2;    // скільки провалів поспіль до зупинки
-const LESSONS = 'practice/task-1-housekeeping/lessons.log';
+const ROOT = process.cwd();
+const BRANCH = 'chore/housekeeping';
+const PROMPT_FILE = 'practice/task-1-housekeeping/PROMPT.md';
+const AGENT_CMD = process.env.AGENT_CMD ?? 'claude -p --permission-mode auto';
+const INTERVAL_MS = Number(process.env.HOUSEKEEPING_INTERVAL_MS ?? 1_800_000);
+const MAX_FILES = 8;
+const K_FAILURES = 3;
+const once = process.argv.includes('--once');
 
-/** Запустити команду, показати її вивід. true, якщо код виходу 0. */
-const run = (cmd, ...args) => spawnSync(cmd, args, { stdio: 'inherit' }).status === 0;
+const [agentBin, ...agentArgs] = AGENT_CMD.split(/\s+/);
 
-/** Прочитати stdout. Порожньо, якщо команда впала (grep без збігів теж «падає»). */
-const out = (cmd, ...args) => spawnSync(cmd, args, { encoding: 'utf8' }).stdout ?? '';
-
-const dirty = () => out('git', 'status', '--porcelain').trim();
-const findings = () => out('grep', '-rnF', MARKER, 'src').split('\n').filter(Boolean);
-const gatesGreen = () => run('npm', 'run', 'verify', '--', '--skip-e2e');
-
-const promptFor = (found) => `Полагодь ${MARKER} тут: ${found}
-Додай тест, який червонів би без твоєї правки. Прибери маркер.
-Не чіпай інших файлів. Не комітай — коміт зробить цикл.`;
-
-if (dirty()) {
-  console.log('дерево брудне — розберись руками, я нічого не чіпаю');
+const exec = (cmd, args) => run(cmd, args, { cwd: ROOT, stdio: 'inherit' }).ok;
+const status = () => git(ROOT, 'status', '--porcelain', '--untracked-files=all');
+const stop = (message) => {
+  console.error(`housekeeping: ${message}`);
   process.exit(1);
-}
-
-let fixes = 0;
-let failures = 0;
-
-for (let iter = 1; iter <= MAX_ITER; iter++) {
-  if (fixes >= MAX_FIXES) { console.log(`стоп: ${MAX_FIXES} фікси за запуск`); break; }
-  if (failures >= K_FAILURES) { console.log(`стоп: ${K_FAILURES} провали поспіль`); break; }
-
-  const [found] = findings();
-  if (!found) { console.log('роботи немає'); break; }
-
-  const sha = out('git', 'rev-parse', 'HEAD').trim();
-  console.log(`\n[${iter}/${MAX_ITER}] ${found}`);
-
-  const agentOk = run('claude', '-p', promptFor(found), '--permission-mode', 'acceptEdits');
-
-  // Вирішують ворота, а не агент. Він міг упасти, зникнути з PATH або нічого не змінити.
-  if (!agentOk || !dirty()) {
-    console.log('  агент не зробив правки');
-    failures += 1;
-  } else if (gatesGreen()) {
-    run('git', 'add', '-A');
-    run('git', 'commit', '-m', `chore(housekeeping): ${found.split(`${MARKER}:`)[1]?.trim() ?? found}`);
-    console.log('  ворота зелені → коміт');
-    fixes += 1;
-    failures = 0;
-  } else {
-    run('git', 'reset', '--hard', sha);
-    run('git', 'clean', '-fd');
-    appendFileSync(LESSONS, `${new Date().toISOString()} ${found}\n`);
-    console.log('  ворота червоні → відкат, урок у lessons.log');
-    failures += 1;
-  }
-}
+};
 ```
 
-Запобіжників рівно чотири: чисте дерево на вході, ліміт ітерацій, ліміт комітів за запуск і зупинка
-після K провалів поспіль. Більше нічого не треба — це не сервіс, а нічний скрипт.
+Спільний `scripts/lib.mjs` уже вміє запускати `npm.cmd` на Windows. Інтервал за замовчуванням —
+30 хвилин; перша ітерація стартує одразу. `MAX_FILES` обмежує кількість файлів однієї задачі.
 
-Закоміть і сам скрипт: `git add practice && git commit -m 'chore: housekeeping-цикл'`. Інакше перший
-же запуск побачить некомічений файл, вважатиме дерево брудним і зупиниться, не почавши.
+Після цього й кожного наступного JavaScript-чанка перевіряйте файл:
 
-**Видно:** `npm run lint` зелений.
+```bash
+node --check practice/task-1-housekeeping/housekeeping.mjs
+```
 
----
+Порожня відповідь означає, що синтаксис правильний. Помилка з номером рядка означає: спочатку
+виправте поточний чанк, а вже тоді переходьте далі.
 
-## Крок 3 — запустити руками
+## 4. Додайте стартові запобіжники
 
-Спершу подивись на цикл очима, і лише потім віддавай його розкладу.
+Допишіть нижче:
+
+```js
+const branch = () => git(ROOT, 'branch', '--show-current');
+if (branch() !== BRANCH) stop(`потрібна гілка ${BRANCH}, зараз «${branch() || 'detached HEAD'}»`);
+if (status()) stop('дерево брудне — спочатку закоміть або приберіть зміни');
+if (!Number.isInteger(INTERVAL_MS) || INTERVAL_MS < 1_000) stop('інтервал має бути цілим числом ≥ 1000');
+
+const prompt = readFileSync(PROMPT_FILE, 'utf8');
+
+const rollback = (sha, reason) => {
+  console.error(`housekeeping: ${reason} → rollback до ${sha.slice(0, 7)}`);
+  exec('git', ['-C', ROOT, 'reset', '--hard', sha]);
+  exec('git', ['-C', ROOT, 'clean', '-fd']);
+  return 'failure';
+};
+```
+
+Runner працює лише на окремій чистій гілці. Початковий SHA кожної ітерації стане точкою
+відкату, якщо Claude вийде за межі або залишить червоні ворота. `reset --hard` і `clean -fd`
+безпечні тут саме тому, що перед стартом ми перевірили окрему чисту гілку.
+
+## 5. Додайте одну ітерацію
+
+```js
+const workOnce = (iteration) => {
+  const sha = git(ROOT, 'rev-parse', 'HEAD');
+  console.log(`\n--- housekeeping ${iteration} · ${sha.slice(0, 7)} ---`);
+
+  const agent = run(agentBin, [...agentArgs, prompt], { cwd: ROOT, stdio: 'inherit' });
+  if (!agent.ok) return rollback(sha, `агент завершився з кодом ${agent.status ?? 'невідомо'}`);
+  if (branch() !== BRANCH) stop('агент перемкнув гілку — потрібне ручне втручання');
+  if (status()) return rollback(sha, 'агент залишив незакомічені зміни');
+
+  const commits = Number(git(ROOT, 'rev-list', '--count', `${sha}..HEAD`));
+  if (commits === 0) {
+    console.log('housekeeping: безпечної роботи немає');
+    return 'idle';
+  }
+  if (commits !== 1) return rollback(sha, `агент створив комітів: ${commits}`);
+
+  const changed = git(ROOT, 'diff', '--name-only', `${sha}..HEAD`).split('\n').filter(Boolean);
+  if (changed.length > MAX_FILES) return rollback(sha, `змінено ${changed.length} файлів, ліміт ${MAX_FILES}`);
+  if (!exec('npm', ['run', 'verify', '--', '--skip-e2e'])) return rollback(sha, 'ворота червоні');
+
+  console.log(`housekeeping: зелено → ${git(ROOT, 'log', '-1', '--oneline')}`);
+  return 'success';
+};
+```
+
+Агент сам читає джерела роботи, запускає потрібні тести й створює змістовний коміт. Runner не
+довіряє звіту моделі: він приймає лише чисте дерево, рівно один коміт, не більше восьми файлів
+і зелений незалежний gate.
+
+## 6. Замкніть цикл
+
+```js
+let iteration = 0;
+let failures = 0;
+
+process.on('SIGINT', () => {
+  console.log('\nhousekeeping: зупинено людиною');
+  process.exit(0);
+});
+
+while (failures < K_FAILURES) {
+  iteration += 1;
+  const result = workOnce(iteration);
+  failures = result === 'failure' ? failures + 1 : 0;
+
+  if (once && result === 'failure') stop('один прохід завершився провалом');
+  if (once) {
+    console.log(`housekeeping: --once завершено (${result})`);
+    break;
+  }
+
+  if (failures < K_FAILURES) {
+    console.log(`housekeeping: наступна перевірка через ${Math.round(INTERVAL_MS / 60_000)} хв`);
+    await sleep(INTERVAL_MS);
+  }
+}
+
+if (failures >= K_FAILURES) stop(`${K_FAILURES} провали поспіль`);
+```
+
+`idle` означає «безпечної роботи немає» і не є помилкою. У режимі `--once` runner завершується
+після першого результату. Без `--once` він засинає між проходами, а після трьох справжніх
+провалів зупиняється, щоб не витрачати токени на одну й ту саму проблему.
+
+## 7. Перевірте й запустіть
+
+Скрипт має бути закомічений до запуску, інакше власний preflight побачить брудне дерево:
+
+```bash
+node --check practice/task-1-housekeeping/housekeeping.mjs
+git add practice/task-1-housekeeping/housekeeping.mjs
+git commit -m "chore: add housekeeping loop"
+node practice/task-1-housekeeping/housekeeping.mjs --once
+```
+
+За замовчуванням використовується Claude. Той самий runner можна віддати іншому агентові:
+
+```bash
+AGENT_CMD='codex exec --sandbox workspace-write' node practice/task-1-housekeeping/housekeeping.mjs --once
+```
+
+У PowerShell змінну задайте окремо: `$env:AGENT_CMD='codex exec --sandbox workspace-write'`.
+
+Перша ітерація стартує негайно, а `--once` завершує процес після її результату. Перевірте:
+
+```bash
+git log --oneline -3
+git status --short
+npm run verify
+```
+
+Після воркшопу запуск без `--once` вмикає справжній періодичний цикл із паузою 30 хвилин:
 
 ```bash
 node practice/task-1-housekeeping/housekeeping.mjs
 ```
 
-**Видно:** рядок `[1/5] src/shorten.js:40:  // TODO(housekeeping): …`, а далі одне з двох. Або
-`ворота зелені → коміт` і новий коміт у `git log --oneline -1`. Або `ворота червоні → відкат`,
-чисте дерево і новий рядок у `lessons.log`.
+## Альтернатива: той самий prompt через Claude `/loop`
 
----
+Після кроку 1 відкрийте Claude Code:
 
-## Крок 4 — розклад
-
-`crontab -e`, два рядки:
-
-```cron
-PATH=/opt/homebrew/bin:/usr/local/bin:/Users/<ти>/.local/bin:/usr/bin:/bin
-*/30 * * * * cd $HOME/sources/url-shortener && node practice/task-1-housekeeping/housekeeping.mjs >> /tmp/housekeeping.log 2>&1
+```bash
+claude --permission-mode auto
 ```
 
-Рядок `PATH=` обов'язковий. Cron дає мінімальне середовище і не бачить ані `node`, ані `npm`, ані
-`claude` — без нього кожен тік мовчки падатиме на `command not found`. Щоб перевірити розклад, не
-чекаючи пів години, постав тимчасово `*/1 * * * *` і дивись `tail -f /tmp/housekeeping.log`.
+Усередині сесії запустіть ту саму політику кожні 30 хвилин:
 
-Дві заувaги. На macOS `/usr/sbin/cron` потребує Full Disk Access, інакше тік не прочитає репо в
-`~/Documents` чи `~/Desktop`. І `crontab -r` зносить весь твій crontab без підтвердження, тож
-знімай завдання через `crontab -e`, а не через `-r`.
+```text
+/loop 30m Прочитай practice/task-1-housekeeping/PROMPT.md і виконай одну ітерацію дослівно.
+```
 
----
+`/loop` потребує Claude Code 2.1.72 або новішого, працює лише поки сесія відкрита й успадковує
+її дозволи. `Esc` скасовує наступне пробудження.
 
-## Чому свій маркер, а не наявні
-
-У `src/` уже лежать шість маркерів `TODO(good-first-task)` — засіяний беклог інших задач, серед них
-stored XSS і graceful shutdown. Це справжній продакшн-код, і агент, спущений на нього вночі,
-перепише його без нагляду. Тому цикл шукає рівно `TODO(housekeeping)`, який ти посадив сам і за який
-відповідаєш. Беклог описаний у [docs/good-first-tasks.md](../../docs/good-first-tasks.md).
-
-## Чому вирішують ворота, а не агент
-
-Агент, який відрапортував успіх, міг зламати сусідній тест, зачепити чужий файл або взагалі не
-змінити жодного рядка. Його код виходу каже лише «процес завершився», а не «код став кращим». Тому
-відповідь на питання «зелено чи ні» дає перепрогін `npm run verify`, а не сам агент. Провал означає
-відкат на попередній коміт і рядок в `lessons.log` — щоб уранці було видно, за що цикл узявся і чому
-програв.
+У [практиці 4](../task-4-self-improvement/README.md) цей runner отримає окрему reflection-смугу,
+яка покращує `PROMPT.md` лише через RED → GREEN eval.

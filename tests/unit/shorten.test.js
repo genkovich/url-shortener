@@ -60,8 +60,4 @@ describe('домен shortener', () => {
     expect(urls).toHaveLength(2);
     expect(urls).toEqual(expect.arrayContaining(['https://example.com/first', 'https://example.com/second']));
   });
-
-  it('listLinks на порожній БД віддає порожній список', () => {
-    expect(listLinks(db)).toEqual([]);
-  });
 });

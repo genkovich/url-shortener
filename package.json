@@ -10,7 +10,7 @@
     "url": "git+https://github.com/genkovich/url-shortener.git"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "node src/server.js",
@@ -26,6 +26,7 @@
     "doctor": "node scripts/doctor.mjs",
     "verify": "node scripts/verify.mjs",
     "ralph": "node loop/ralph.mjs",
+    "eval:self-test": "node practice/task-3-skill-eval/behavioral/eval.mjs --self-test",
     "tools:check": "node scripts/check-tools.mjs",
     "links:check": "node scripts/check-links.mjs"
   },

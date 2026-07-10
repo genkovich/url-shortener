@@ -113,6 +113,7 @@ const gateIsGreen = () => GATE.every((s) => run('npm', ['run', s], { cwd: ROOT, 
 
 // ⚠ `HEAD` — це не ім'я гілки, а відповідь git на «ти в detached HEAD».
 const branch = () => git(ROOT, 'rev-parse', '--abbrev-ref', 'HEAD');
+const treeIsDirty = () => git(ROOT, 'status', '--porcelain').length > 0;
 
 /** Секція, яку ранер дописує до статичного PROMPT.md. Плейсхолдерів і шаблонізатора немає. */
 const targetSection = (iteration) =>
@@ -157,8 +158,11 @@ for (const [name, value] of [['MAX_ITER', MAX_ITER], ['K_FAILURES', K_FAILURES],
 
 if (dryRun) {
   console.log(`  агент:    ${AGENT_CMD}`);
+  console.log(`  промпт:   ${PROMPT_FILE}`);
   console.log(`  ціль:     ${slug ? `${slug}: ${count('done')} done, ${count('todo')} todo` : 'не задано (--feature <slug>)'}`);
   console.log(`  трекер:   ${slug ? TRACKER : '—'}`);
+  console.log(`  гілка:    ${branch()} · дерево ${treeIsDirty() ? 'брудне' : 'чисте'}`);
+  console.log(`  старт:    ${branch() === 'main' ? 'не готовий — створи окрему гілку' : treeIsDirty() ? 'не готовий — закоміть або прибери зміни' : 'готовий'}`);
   console.log(`  зупинки:  MAX_ITER=${MAX_ITER} · K_FAILURES=${K_FAILURES} · NO_IMPROVEMENT=${NO_IMPROVEMENT}`);
   console.log('  Жодного токена не витрачено. Прибери --dry-run, щоб поїхало насправді.');
   process.exit(0);
@@ -179,7 +183,7 @@ if (branch() === 'main') die(`HEAD на main — створи гілку: git ch
 
 // ⚠ Брудне дерево перевіряємо лише тут. У сухому прогоні воно нікому не заважає, а `verify`
 // ганяє саме сухий — інакше ворота червоніли б від будь-якої незбереженої правки.
-if (!allowDirty && git(ROOT, 'status', '--porcelain').length > 0) {
+if (!allowDirty && treeIsDirty()) {
   die('робоче дерево брудне — закоміть або сховай зміни, або передай --allow-dirty');
 }
 

@@ -6,7 +6,7 @@
 ## Вимоги
 
 - Git
-- Node.js 20 (`.nvmrc`); `npm` постачається разом із Node.js і окремо не встановлюється
+- Node.js 24 LTS (`.nvmrc`); `npm` постачається разом із Node.js і окремо не встановлюється
 - один AI coding agent: Claude Code, Codex CLI, GitHub Copilot CLI або Cursor Agent
 - інтернет для `npm ci`, завантаження Chromium і роботи агента
 
@@ -14,13 +14,25 @@
 
 ### macOS
 
-Встановіть Git через Xcode Command Line Tools:
+Встановіть [Homebrew](https://brew.sh/):
 
 ```bash
-xcode-select --install
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-Встановіть [`nvm`](https://github.com/nvm-sh/nvm) і Node.js 20 разом із npm:
+Наприкінці інсталятор покаже блок `Next steps`. Виконайте надруковані там команди, щоб додати
+`brew` до `PATH`, а тоді перевірте встановлення й поставте Git:
+
+```bash
+brew --version
+brew install git
+git --version
+```
+
+Якщо Homebrew попросить встановити системні Command Line Tools, погодьтеся з діалогом — окремо
+запускати їхній інсталятор не потрібно.
+
+Встановіть [`nvm`](https://github.com/nvm-sh/nvm) і Node.js 24 LTS разом із npm:
 
 ```bash
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
@@ -30,8 +42,8 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
 
 ```bash
 command -v nvm
-nvm install 20
-nvm alias default 20
+nvm install 24
+nvm alias default 24
 ```
 
 Альтернативні способи встановлення Git описані на
@@ -56,7 +68,7 @@ sudo pacman -S --needed git curl
 Потрібно виконати лише блок для свого дистрибутива. Інші дистрибутиви перелічені на
 [git-scm.com](https://git-scm.com/install/linux).
 
-Встановіть [`nvm`](https://github.com/nvm-sh/nvm) і Node.js 20 разом із npm:
+Встановіть [`nvm`](https://github.com/nvm-sh/nvm) і Node.js 24 LTS разом із npm:
 
 ```bash
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
@@ -66,8 +78,8 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
 
 ```bash
 command -v nvm
-nvm install 20
-nvm alias default 20
+nvm install 24
+nvm alias default 24
 ```
 
 ### Windows
@@ -82,11 +94,11 @@ winget install --id Git.Git -e --source winget
 [git-scm.com](https://git-scm.com/install/windows). Після встановлення перезапустіть
 PowerShell.
 
-Node.js 20 разом із npm встановіть офіційним `.msi`:
+Node.js 24 LTS разом із npm встановіть офіційним `.msi`:
 
-1. Відкрийте [архів останнього Node.js 20](https://nodejs.org/download/release/latest-v20.x/).
-2. Завантажте `node-v20.*-x64.msi` для звичайного Intel/AMD-комп'ютера або
-   `node-v20.*-arm64.msi` для Windows on ARM.
+1. Відкрийте [архів останнього Node.js 24](https://nodejs.org/download/release/latest-v24.x/).
+2. Завантажте `node-v24.*-x64.msi` для звичайного Intel/AMD-комп'ютера або
+   `node-v24.*-arm64.msi` для Windows on ARM.
 3. Запустіть інсталятор із типовими налаштуваннями та перезапустіть PowerShell.
 
 Перевірка до клонування:
@@ -151,6 +163,10 @@ npm run dev
 Застосунок: <http://localhost:3000>. Локальна база створюється автоматично в
 `data/links.db`.
 
+## Практики воркшопу
+
+Послідовність вправ і переходи між ними: [`practice/README.md`](practice/README.md).
+
 ## Робота з фічею
 
 1. Прочитайте [`AGENTS.md`](AGENTS.md) і [`docs/architecture-map.md`](docs/architecture-map.md).
@@ -181,6 +197,7 @@ npm run dev
 | `npm run verify` | усі детерміновані ворота |
 | `npm run tools:check` | синхронність вендорених скілів |
 | `npm run links:check` | валідність посилань у документації |
+| `npm run eval:self-test` | self-test behavioral grader-а без моделі |
 
 ## Автономний луп
 
@@ -201,6 +218,7 @@ docs/features/<slug>/   SDD-пакети фіч
 docs/roadmap.md         черга фіч
 docs/architecture-map.md  архітектурні конвенції
 loop/                   автономний ранер
+practice/               чотири практики воркшопу
 scripts/                локальні ворота
 ```
 
