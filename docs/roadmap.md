@@ -1,6 +1,6 @@
 ---
 status: living
-updated_at: "2026-07-08"
+updated_at: "2026-07-10"
 ---
 
 # Roadmap — url-shortener
@@ -14,13 +14,28 @@ updated_at: "2026-07-08"
 | Input validation | `input-validation` | garbage and unsafe URLs are rejected before a link is stored |
 
 ## Next
-| Feature | Slug | Reach | Impact | Confidence | Effort | RICE |
-|---|---|---|---|---|---|---|
-| Link expiry | `link-expiry` | M | H | H | M | high |
-| Custom alias | `custom-alias` | M | M | H | S | high |
-| QR codes | `qr-codes` | M | M | H | S | high |
-| Rate limiting | `rate-limiting` | L | H | M | M | med |
-| Bulk shorten + delete | `bulk-and-delete` | L | M | M | M | med |
+| Feature | Slug | Reach | Impact | Confidence | Effort | RICE | Depends on |
+|---|---|---|---|---|---|---|---|
+| Link expiry | `link-expiry` | M | H | H | M | high | — |
+| Custom alias | `custom-alias` | M | M | H | S | high | — |
+| QR codes | `qr-codes` | M | M | H | S | high | — |
+| Rate limiting | `rate-limiting` | L | H | M | M | med | — |
+| Bulk shorten + delete | `bulk-and-delete` | L | M | M | M | med | `input-validation` |
+
+`Depends on` is a **hard** dependency: the named feature must appear under **Shipped** before this
+one may start. Nothing enforces it. This queue is read by a human, and the ordering decision stays
+with the human — `npm run ralph` takes the feature it is told to take (`--feature <slug>`) and does
+not consult this file at all. A loop that picked its own next task would need a rule, and a rule is
+one more thing that can be wrong while looking right.
+
+Soft dependencies are deliberately absent from the column, because they do not block: `qr-codes`
+answers `410` for an expired link **only if** `link-expiry` has shipped. Without it that branch
+does not exist, and the feature is complete regardless.
+
+## Good first tasks
+Six small, real defects in code that already ships, each with a marker at the offending line and
+its own acceptance criteria: [good-first-tasks.md](./good-first-tasks.md). They are notes to self,
+not queue items — take one whenever, by hand.
 
 ## Later
 - Click analytics beyond a counter.
