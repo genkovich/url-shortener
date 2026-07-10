@@ -65,12 +65,16 @@ Vanilla static page `src/public/` — CSS variables theme in `style.css`. Reuse 
 - New endpoint → route in `src/app.js` + logic in `src/shorten.js` (precedent: `POST /api/shorten`).
 - New validation → guard in `src/shorten.js` (precedent: none yet — see feature `input-validation`).
 - New column → migration in `src/db.js` (precedent: base `migrate()`).
+- New renderer, or any concern that owns a dependency of its own → **its own module** under `src/`, not `shorten.js` (planned: `src/qr.js` for `qr-codes`). `src/shorten.js` is the *link domain*; a QR encoder is not a rule about links, and its dependency has no business reaching the file that today imports only `node:crypto`.
+- New transport-level concern (rate limits, auth, tracing) → its own module plus middleware in `createApp` (planned: `src/rate-limit.js` for `rate-limiting`). Both deviations from "new rule → `shorten.js`" are argued in their features' ADRs rather than taken quietly.
+- New fallback route → below every `/api/*` route and above the catch-all `GET /:code` (see `api-json-404` in [good-first-tasks.md](./good-first-tasks.md#api-json-404)).
 
 ## Constraints & known tech-debt
 - No auth (single-user toy); AC "authorization" type is N/A for most features — note explicitly.
-- No rate-limit yet.
+- **No rate-limit yet.** `POST /api/shorten` accepts an unbounded request rate from any client. Feature `rate-limiting` closes it with an in-memory token bucket per IP, `429` and `Retry-After`.
 - SQLite single-file — not for concurrent prod load (out of scope).
-- **Stored URLs are unvalidated and rendered into `innerHTML`.** `POST /api/shorten` accepts any string (feature `input-validation` closes the write side), and `loadLinks()` in `src/public/app.js` interpolates the stored `url` straight into a row template. Until both ends are fixed, a stored `javascript:` scheme or markup payload reaches the DOM. The write side is scheduled; the read side is not — see `base-vertical` T4 edge cases.
+- **Stored URLs are unvalidated and rendered into `innerHTML`.** `POST /api/shorten` accepts any string (feature `input-validation` closes the write side), and `loadLinks()` in `src/public/app.js` interpolates the stored `url` straight into a row template. Until both ends are fixed, a stored `javascript:` scheme or markup payload reaches the DOM. Both ends are now scheduled: the write side by `input-validation`, the read side by [`escape-html`](./good-first-tasks.md#escape-html) — see also `base-vertical` T4 edge cases.
+- **Unmatched paths under `/api` break the error-shape convention.** Measured: `GET /api/nope` answers Express's default HTML page, not `{ error }`. Every hand-written error obeys the convention; the one nobody wrote does not. Scheduled as [`api-json-404`](./good-first-tasks.md#api-json-404).
 
 ## Reconciliation with the authored architecture doc
 This map was authored at bootstrap (greenfield). Update `reflects_commit` when structure changes.

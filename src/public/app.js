@@ -1,6 +1,7 @@
 const $ = (id) => document.getElementById(id);
 
 async function loadLinks() {
+  // TODO(good-first-task): fetch без catch — офлайн або впалий сервер дають тишу — docs/good-first-tasks.md#fetch-error
   const res = await fetch('/api/links');
   const links = await res.json();
   const rows = $('rows');
@@ -8,6 +9,7 @@ async function loadLinks() {
   $('empty').classList.toggle('hidden', links.length > 0);
   for (const l of links) {
     const tr = document.createElement('tr');
+    // TODO(good-first-task): l.url і l.code летять в innerHTML без екранування — stored XSS — docs/good-first-tasks.md#escape-html
     tr.innerHTML = `
       <td><a href="/${l.code}" target="_blank">${l.code}</a></td>
       <td class="trunc" title="${l.url}">${l.url}</td>
@@ -45,6 +47,7 @@ $('form').addEventListener('submit', async (e) => {
 });
 
 $('copy').addEventListener('click', () => {
+  // TODO(good-first-task): жодного сигналу про успіх, і writeText мовчки реджектиться на незахищеному origin — docs/good-first-tasks.md#copy-feedback
   navigator.clipboard.writeText($('short').textContent);
 });
 

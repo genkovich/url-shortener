@@ -8,3 +8,5 @@ const app = createApp(db);
 app.listen(PORT, () => {
   console.log(`url-shortener → http://localhost:${PORT}`);
 });
+
+// TODO(good-first-task): SIGINT/SIGTERM рвуть процес — ні server.close(), ні db.close(), WAL лишається — docs/good-first-tasks.md#graceful-shutdown
