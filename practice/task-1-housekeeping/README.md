@@ -17,7 +17,7 @@ Claude обирає одну задачу → один локальний commit
 ```
 
 На воркшопі запустимо рівно один прохід через `--once`. Без цього прапорця цикл працює до
-`Ctrl+C` або трьох провалів поспіль. Він викликає модель і може витрачати гроші без участі
+`Ctrl+C` або першого провалу. Він викликає модель і може витрачати гроші без участі
 людини; запускайте лише після дозволу ведучого. `git push` і PR заборонені.
 
 ## 1. Підготуйте гілку
@@ -63,8 +63,6 @@ const BRANCH = 'chore/housekeeping';
 const PROMPT_FILE = 'practice/task-1-housekeeping/PROMPT.md';
 const AGENT_CMD = process.env.AGENT_CMD ?? 'claude -p --permission-mode auto';
 const INTERVAL_MS = Number(process.env.HOUSEKEEPING_INTERVAL_MS ?? 1_800_000);
-const MAX_FILES = 8;
-const K_FAILURES = 3;
 const once = process.argv.includes('--once');
 
 const [agentBin, ...agentArgs] = AGENT_CMD.split(/\s+/);
@@ -78,7 +76,7 @@ const stop = (message) => {
 ```
 
 Спільний `scripts/lib.mjs` уже вміє запускати `npm.cmd` на Windows. Інтервал за замовчуванням —
-30 хвилин; перша ітерація стартує одразу. `MAX_FILES` обмежує кількість файлів однієї задачі.
+30 хвилин; перша ітерація стартує одразу.
 
 Після цього й кожного наступного JavaScript-чанка перевіряйте файл:
 
@@ -132,8 +130,6 @@ const workOnce = (iteration) => {
   }
   if (commits !== 1) return rollback(sha, `агент створив комітів: ${commits}`);
 
-  const changed = git(ROOT, 'diff', '--name-only', `${sha}..HEAD`).split('\n').filter(Boolean);
-  if (changed.length > MAX_FILES) return rollback(sha, `змінено ${changed.length} файлів, ліміт ${MAX_FILES}`);
   if (!exec('npm', ['run', 'verify', '--', '--skip-e2e'])) return rollback(sha, 'ворота червоні');
 
   console.log(`housekeeping: зелено → ${git(ROOT, 'log', '-1', '--oneline')}`);
@@ -142,43 +138,31 @@ const workOnce = (iteration) => {
 ```
 
 Агент сам читає джерела роботи, запускає потрібні тести й створює змістовний коміт. Runner не
-довіряє звіту моделі: він приймає лише чисте дерево, рівно один коміт, не більше восьми файлів
-і зелений незалежний gate.
+довіряє звіту моделі: він приймає лише чисте дерево, рівно один коміт і зелений незалежний gate.
 
 ## 6. Замкніть цикл
 
 ```js
 let iteration = 0;
-let failures = 0;
 
-process.on('SIGINT', () => {
-  console.log('\nhousekeeping: зупинено людиною');
-  process.exit(0);
-});
-
-while (failures < K_FAILURES) {
+while (true) {
   iteration += 1;
   const result = workOnce(iteration);
-  failures = result === 'failure' ? failures + 1 : 0;
 
-  if (once && result === 'failure') stop('один прохід завершився провалом');
+  if (result === 'failure') stop('прохід завершився провалом');
   if (once) {
     console.log(`housekeeping: --once завершено (${result})`);
     break;
   }
 
-  if (failures < K_FAILURES) {
-    console.log(`housekeeping: наступна перевірка через ${Math.round(INTERVAL_MS / 60_000)} хв`);
-    await sleep(INTERVAL_MS);
-  }
+  console.log(`housekeeping: наступна перевірка через ${Math.round(INTERVAL_MS / 60_000)} хв`);
+  await sleep(INTERVAL_MS);
 }
-
-if (failures >= K_FAILURES) stop(`${K_FAILURES} провали поспіль`);
 ```
 
 `idle` означає «безпечної роботи немає» і не є помилкою. У режимі `--once` runner завершується
-після першого результату. Без `--once` він засинає між проходами, а після трьох справжніх
-провалів зупиняється, щоб не витрачати токени на одну й ту саму проблему.
+після першого результату. Без `--once` він засинає між успішними або `idle`-проходами й зупиняється після
+першого провалу, щоб не витрачати токени на повторення тієї самої помилки.
 
 ## 7. Перевірте й запустіть
 
