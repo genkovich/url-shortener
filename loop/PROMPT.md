@@ -22,23 +22,35 @@
 ## Протокол ходу
 
 Візьми з трекера цілі **першу** задачу зі статусом `todo`, усі залежності якої вже `done`.
-Жени її циклом `RED → GREEN → REFACTOR → GATE → COMMIT` за протоколом
+Жени її циклом `RED → GREEN → REFACTOR → GATE → REVIEW → COMMIT` за протоколом
 [.claude/skills/implement/SKILL.md](../.claude/skills/implement/SKILL.md) (не-Claude агенти
 читають ту саму копію в [.agents/skills/sdd-implement/SKILL.md](../.agents/skills/sdd-implement/SKILL.md)).
 
-1. **RED** — спершу тест, що падає. Запусти й переконайся, що він падає **на асерті**, а не на
-   синтаксисі чи відсутньому імпорті. Тест, який зеленіє одразу, — не тест, а декорація:
-   зроби його суворішим.
-2. **GREEN** — найменший код, що робить його зеленим.
-3. **REFACTOR** — прибери за собою, лишаючи зелене.
-4. **GATE** — `npm run lint && npm run test:fast && npm run links:check`. Червоне → лагодь,
-   не коміть. E2E (`npm run test:e2e`) ганяй лише там, де його прямо вимагає DoD задачі.
-5. **COMMIT** — **один коміт на задачу**, з трейлерами `SDD-Task: <id>` і `SDD-AC: <перелік>`.
-   Онови `tracker.md`: задача → `done`.
+Цей prompt навмисно перевизначає стандартний single-agent режим skill. Ти — coordinator:
+**не пиши тест або продукт-код сам**. У Claude Code послідовно викликай project agents за bare
+`subagent_type`; не запускай їх паралельно й не створюй worktree. Не використовуй
+general-purpose або single-agent fallback. Якщо іменованої ролі немає, запиши це в журнал і
+заверши хід без коміта й без зміни tracker.
+
+1. **RED → `test-author`.** Передай йому id задачі, task-файл, AC, DoD і `files_hint`. Він пише
+   лише тест, запускає його й повертає команду, класифікацію GOOD/BAD RED та точний failing
+   assertion. На BAD RED або false-pass повторно виклич `test-author`; не переходь до GREEN без
+   GOOD RED.
+2. **GREEN + REFACTOR + GATE → `implementer`.** Передай той самий task brief і RED-handoff.
+   Він пише мінімальний продукт-код, не послаблює тест і запускає
+   `npm run lint && npm run test:fast && npm run links:check`. E2E запускає лише там, де цього
+   прямо вимагає DoD задачі.
+3. **REVIEW → `reviewer`.** Після зеленого handoff передай йому task, AC і поточний diff.
+   Reviewer працює read-only та повертає cited findings або `REVIEW_CLEAN`. Finding про тест чи
+   непокритий AC поверни `test-author`, а потім `implementer`; finding про реалізацію поверни
+   `implementer`. Після виправлення повтори gate й знову виклич `reviewer`.
+4. **COMMIT → coordinator.** Лише після `REVIEW_CLEAN` онови `tracker.md`: задача → `done` і
+   створи **один коміт на задачу** з трейлерами `SDD-Task: <id>` та `SDD-AC: <перелік>`.
 
 ## Заборонено
 
 - Писати код до червоного тесту.
+- Писати тест або продукт-код із coordinator-контексту замість dispatch іменованої ролі.
 - **Послаблювати чужий тест, щоб він позеленів.** Не проходить, а ти певен, що код правильний, —
   ескалюй: критерій приймання може бути хибним. Не роби тест м'якшим.
 - Вигадувати рішення, якого немає в специфікації. Не знаєш — не вгадуй (див. нижче).
