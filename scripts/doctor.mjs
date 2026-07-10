@@ -6,7 +6,7 @@
 // хтось півгодини шукає, чому «ворота зелені, а нічого не перевіряється».
 //
 // Критичне (node, npm, git, node_modules) → exit 1 і точна команда лікування.
-// Опційне (claude, codex) → ⚠ і рядок про те, що саме без нього вимикається.
+// Опційне (claude, codex, copilot, cursor-agent) → ⚠ і рядок про те, що саме без нього вимикається.
 
 // ⚠ `process` і `console` — явним імпортом, а не з глобалів. Так файл лишається зеленим під
 // eslint незалежно від того, чи роздає конфіг node-глобали розширенню `.mjs`: блок із
@@ -91,6 +91,8 @@ const TOOLS = [
   },
   { label: 'claude', cmd: 'claude', args: ['--version'], hint: '(опційно: скіл implement + субагенти)' },
   { label: 'codex', cmd: 'codex', args: ['--version'], hint: '(опційно: скіл sdd-implement)' },
+  { label: 'copilot', cmd: 'copilot', args: ['--version'], hint: '(опційно: AGENT_CMD для лупа)' },
+  { label: 'cursor-agent', cmd: 'cursor-agent', args: ['--version'], hint: '(опційно: AGENT_CMD для лупа)' },
 ];
 
 const rows = [];

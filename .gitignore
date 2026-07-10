@@ -7,3 +7,9 @@ playwright-report/
 .DS_Store
 .worktrees/
 tmp/
+
+# Сигнал «луп закінчив» і журнал агента. Обидва створює `npm run ralph`.
+# ⚠ `.gitignore` не стримує ворота: `check-links.mjs` і `check-tools.mjs` обходять файлову
+# систему. Журнал вони пропускають окремим винятком, за коментарем у самих скриптах.
+DONE
+loop/JOURNAL.md

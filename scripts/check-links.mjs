@@ -24,10 +24,17 @@ const v = new Verdict('links:check');
 
 const SKIP_DIRS = new Set(['node_modules', '.git', 'playwright-report', 'test-results']);
 
-// ⚠ Єдиний виняток. Шаблони лежать у docs/_templates/, а їхні відносні шляхи (`../spec.md`)
+// ⚠ Перший виняток. Шаблони лежать у docs/_templates/, а їхні відносні шляхи (`../spec.md`)
 // правильні для МІСЦЯ ПРИЗНАЧЕННЯ — docs/features/<slug>/tasks/, куди їх копіюють. На місці
 // вони биті за визначенням. Плюс у них плейсхолдери `<slug>`, яких не існує ніде.
 const TEMPLATES = join(REPO, 'docs', '_templates');
+
+// ⚠ Другий виняток. `loop/JOURNAL.md` пише АГЕНТ — це його чернетка, а не документація репо.
+// Ці ворота обходять ФАЙЛОВУ СИСТЕМУ, а не git, тож `.gitignore` їх не стримує. А `links:check`
+// входить у гейт лупа: агент, який чесно запише «спіткнувся на [[T2]]», завалить власний прогін
+// і ніколи не здогадається чому — тести зелені, лінт зелений, впала документація, якої ніхто не
+// писав. Ворота стережуть те, що читає людина, а не те, що модель нашкрябала собі на пам'ять.
+const JOURNAL = join(REPO, 'loop', 'JOURNAL.md');
 
 function mdFiles(dir) {
   const found = [];
@@ -36,7 +43,7 @@ function mdFiles(dir) {
       const path = join(d, entry.name);
       if (entry.isDirectory()) {
         if (!SKIP_DIRS.has(entry.name) && path !== TEMPLATES) walk(path);
-      } else if (entry.name.endsWith('.md')) {
+      } else if (entry.name.endsWith('.md') && path !== JOURNAL) {
         found.push(path);
       }
     }
@@ -132,5 +139,6 @@ for (const file of mdFiles(REPO)) {
 if (wikilinks === 0) v.ok.push('жодного [[wikilink]] — уся дока рендериться на GitHub');
 if (broken === 0) v.ok.push(`${links} відносних посилань: файли на місці, якорі збігаються із заголовками`);
 v.ok.push('docs/_templates/ пропущено — його відносні шляхи правильні у теці призначення');
+v.ok.push('loop/JOURNAL.md пропущено — це чернетка агента, а не документація репо');
 
 v.report();

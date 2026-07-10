@@ -30,15 +30,22 @@ const v = new Verdict('tools:check');
 
 const SKIP_DIRS = new Set(['node_modules', '.git']);
 
+// ⚠ `loop/JOURNAL.md` пише АГЕНТ — це його чернетка, а не документація. Ворота обходять файлову
+// систему, а не git, тож `.gitignore` їх не стримує. Агент, який чесно запише «падало
+// `npm run qr`», завалив би цю перевірку власним звітом про поламану команду. Та сама причина
+// і той самий виняток є в `check-links.mjs`.
+const JOURNAL = join(REPO, 'loop', 'JOURNAL.md');
+
 /** Усі `.md` під `dir`, рекурсивно, у стабільному порядку. */
 function mdFiles(dir) {
   const found = [];
   const walk = (d) => {
     for (const entry of readdirSync(d, { withFileTypes: true })) {
+      const path = join(d, entry.name);
       if (entry.isDirectory()) {
-        if (!SKIP_DIRS.has(entry.name)) walk(join(d, entry.name));
-      } else if (entry.name.endsWith('.md')) {
-        found.push(join(d, entry.name));
+        if (!SKIP_DIRS.has(entry.name)) walk(path);
+      } else if (entry.name.endsWith('.md') && path !== JOURNAL) {
+        found.push(path);
       }
     }
   };
