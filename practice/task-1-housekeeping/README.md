@@ -179,6 +179,29 @@ git commit -m "chore: add housekeeping loop"
 node practice/task-1-housekeeping/housekeeping.mjs --once
 ```
 
+Увесь вивід агента й воріт уже видно в цьому терміналі. Щоб одночасно бачити й зберігати його в
+лог, на macOS або Linux запустіть:
+
+```bash
+node practice/task-1-housekeeping/housekeeping.mjs --once 2>&1 | tee /tmp/housekeeping.log
+```
+
+Стежити за цим логом з іншого термінала:
+
+```bash
+tail -f /tmp/housekeeping.log
+```
+
+У PowerShell той самий запуск виглядає так:
+
+```powershell
+node practice/task-1-housekeeping/housekeeping.mjs --once 2>&1 |
+  Tee-Object -FilePath "$env:TEMP\housekeeping.log"
+```
+
+Не зберігайте лог всередині репозиторію: runner побачить новий файл як брудне дерево. `/tmp` і
+`$env:TEMP` лежать поза репозиторієм, тому не заважають перевірці.
+
 За замовчуванням використовується Claude. Той самий runner можна віддати іншому агентові:
 
 ```bash
