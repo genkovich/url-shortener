@@ -62,10 +62,14 @@ const ROOT = process.cwd();
 const BRANCH = 'chore/housekeeping';
 const PROMPT_FILE = 'practice/task-1-housekeeping/PROMPT.md';
 const AGENT_CMD = process.env.AGENT_CMD ?? 'claude -p --permission-mode auto';
+// Альтернативи: закоментуйте рядок вище й розкоментуйте рівно один нижче.
+// const AGENT_CMD = process.env.AGENT_CMD ?? 'codex exec --sandbox workspace-write --ephemeral --color never';
+// const AGENT_CMD = process.env.AGENT_CMD ?? 'copilot --allow-all-tools --silent --no-color --no-ask-user -p';
+// const AGENT_CMD = process.env.AGENT_CMD ?? 'cursor-agent -p --trust --force --output-format text';
 const INTERVAL_MS = Number(process.env.HOUSEKEEPING_INTERVAL_MS ?? 1_800_000);
 const once = process.argv.includes('--once');
 
-const [agentBin, ...agentArgs] = AGENT_CMD.split(/\s+/);
+const [agentBin, ...agentArgs] = AGENT_CMD.trim().split(/\s+/);
 
 const exec = (cmd, args) => run(cmd, args, { cwd: ROOT, stdio: 'inherit' }).ok;
 const status = () => git(ROOT, 'status', '--porcelain', '--untracked-files=all');
@@ -178,10 +182,11 @@ node practice/task-1-housekeeping/housekeeping.mjs --once
 За замовчуванням використовується Claude. Той самий runner можна віддати іншому агентові:
 
 ```bash
-AGENT_CMD='codex exec --sandbox workspace-write' node practice/task-1-housekeeping/housekeeping.mjs --once
+AGENT_CMD='codex exec --sandbox workspace-write --ephemeral --color never' node practice/task-1-housekeeping/housekeeping.mjs --once
 ```
 
-У PowerShell змінну задайте окремо: `$env:AGENT_CMD='codex exec --sandbox workspace-write'`.
+У PowerShell змінну задайте окремо:
+`$env:AGENT_CMD='codex exec --sandbox workspace-write --ephemeral --color never'`.
 
 Перша ітерація стартує негайно, а `--once` завершує процес після її результату. Перевірте:
 
