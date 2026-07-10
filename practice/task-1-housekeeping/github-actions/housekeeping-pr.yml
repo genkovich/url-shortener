@@ -1,0 +1,115 @@
+name: Housekeeping draft PR
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 8 * * 1'
+
+concurrency:
+  group: housekeeping-draft-pr
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  housekeeping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BRANCH_NAME: chore/housekeeping-${{ github.run_id }}
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare isolated branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$BRANCH_NAME"
+
+      - name: Run one housekeeping iteration
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ github.token }}
+          prompt: |
+            Read practice/task-1-housekeeping/PROMPT.md and execute exactly one iteration.
+            The workflow already created branch `${{ env.BRANCH_NAME }}` from `main`.
+            Stay on that branch. Do not push and do not create a pull request yourself.
+            If no safe concrete work exists, leave the tree unchanged and return NO_WORK.
+          claude_args: >-
+            --max-turns 20
+            --allowedTools "Read,Write,Edit,Glob,Grep,Bash(npm:*),Bash(node:*),Bash(git:*),Bash(gh issue:*)"
+
+      - name: Validate agent result
+        id: result
+        shell: bash
+        run: |
+          test "$(git branch --show-current)" = "$BRANCH_NAME"
+          commits="$(git rev-list --count origin/main..HEAD)"
+          dirty="$(git status --porcelain --untracked-files=all)"
+
+          if [[ "$commits" -eq 0 && -z "$dirty" ]]; then
+            echo 'has_work=false' >> "$GITHUB_OUTPUT"
+            echo 'No safe housekeeping work found.'
+            exit 0
+          fi
+
+          if [[ "$commits" -ne 1 ]]; then
+            echo "Expected exactly one commit, got $commits." >&2
+            exit 1
+          fi
+
+          if [[ -n "$dirty" ]]; then
+            echo 'Agent left uncommitted changes:' >&2
+            echo "$dirty" >&2
+            exit 1
+          fi
+
+          echo 'has_work=true' >> "$GITHUB_OUTPUT"
+
+      - name: Run independent gate
+        if: steps.result.outputs.has_work == 'true'
+        run: npm run verify -- --skip-e2e
+
+      - name: Push housekeeping branch
+        if: steps.result.outputs.has_work == 'true'
+        run: git push --set-upstream origin "$BRANCH_NAME"
+
+      - name: Open draft pull request
+        if: steps.result.outputs.has_work == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr create \
+            --draft \
+            --base main \
+            --head "$BRANCH_NAME" \
+            --title 'chore: automated housekeeping' \
+            --body-file - <<'EOF'
+          Automated housekeeping candidate.
+
+          - One isolated agent iteration
+          - Exactly one clean commit
+          - `npm run verify -- --skip-e2e` passed before push
+          - Merge remains a human decision
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EOF

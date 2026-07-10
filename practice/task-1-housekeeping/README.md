@@ -225,6 +225,12 @@ npm run verify
 node practice/task-1-housekeeping/housekeeping.mjs
 ```
 
+## Приклад: GitHub Actions готує draft PR
+
+Ту саму політику може запускати не локальний таймер, а GitHub Actions. Готовий неактивний приклад
+лежить у [github-actions/](./github-actions/README.md): ручний або cron-тригер запускає один housekeeping-прохід,
+перевіряє один чистий коміт і зелені ворота, а потім відкриває draft PR замість прямого merge.
+
 ## Альтернатива: той самий prompt через Claude `/loop`
 
 Після кроку 1 відкрийте Claude Code:
