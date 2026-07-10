@@ -1,112 +1,208 @@
-# 🔗 url-shortener
+# url-shortener
 
-URL shortener на Node/Express/SQLite — з живою frontend, трирівневим набором тестів
-і **детальним backlog'ом у форматі SDD**: кожна фіча описана достатньо, щоб AI-агент
-реалізував її без жодного уточнювального питання.
+Навчальний URL shortener на Node.js, Express і SQLite. Робота організована як SDD-пакети
+фіч із TDD-циклом і детермінованими воротами.
 
-Продукт тут навмисно маленький. Цінність — у тому, що навколо нього: специфікації,
-контракти, ADR, атомарні таски з GWT-критеріями та детерміновані ворота, які не вміють
-брехати про зелене.
+## Вимоги
 
-## Швидкий старт
+- Git
+- Node.js 20 (`.nvmrc`); `npm` постачається разом із Node.js і окремо не встановлюється
+- один AI coding agent: Claude Code, Codex CLI, GitHub Copilot CLI або Cursor Agent
+- інтернет для `npm ci`, завантаження Chromium і роботи агента
 
-```bash
-nvm use                            # Node 20+
-npm install
-npx playwright install chromium    # для e2e
-npm run dev                        # → http://localhost:3000
-```
+Виконайте лише секцію для своєї операційної системи.
 
-Схему БД створює `migrate()` у `src/db.js` при першому запуску — жодного окремого кроку
-міграції не потрібно. Файл бази лягає в `data/links.db` (у git не потрапляє).
+### macOS
 
-Перевірити, що все зелене:
+Встановіть Git через Xcode Command Line Tools:
 
 ```bash
-npm run doctor      # чи все є на цій машині
-npm run verify      # усі детерміновані ворота однією командою
+xcode-select --install
 ```
 
-## Що вже працює
+Встановіть [`nvm`](https://github.com/nvm-sh/nvm) і Node.js 20 разом із npm:
 
-- Frontend: форма + список «Мої лінки».
-- `POST /api/shorten` · `GET /:code` (302 + лічильник кліків) · `GET /api/links` · `GET /api/stats/:code`.
-- Трирівневі тести: unit (домен) → integration (HTTP через supertest) → e2e (Playwright).
-- Заглушки на `501`: `GET /metrics`, `GET /api/qr/:code`, `DELETE /api/:code` — їхні фічі
-  чекають у беклозі.
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
+```
 
-## Стек
+Закрийте й знову відкрийте Terminal, потім виконайте:
 
-Node (ESM) + Express 4 + SQLite (`better-sqlite3`, prebuilt — без нативної компіляції).
-Тести: Vitest (unit + integration) + supertest + Playwright (e2e). Лінт — ESLint flat config.
-CI — GitHub Actions (`npm run verify` на трьох ОС × двох Node).
+```bash
+command -v nvm
+nvm install 20
+nvm alias default 20
+```
 
-Збірки немає: `node src/server.js` і все.
+Альтернативні способи встановлення Git описані на
+[git-scm.com](https://git-scm.com/install/mac).
+
+### Linux
+
+Встановіть Git і `curl` через пакетний менеджер свого дистрибутива:
+
+```bash
+# Debian / Ubuntu
+sudo apt update
+sudo apt install -y git curl
+
+# Fedora
+sudo dnf install -y git curl
+
+# Arch Linux
+sudo pacman -S --needed git curl
+```
+
+Потрібно виконати лише блок для свого дистрибутива. Інші дистрибутиви перелічені на
+[git-scm.com](https://git-scm.com/install/linux).
+
+Встановіть [`nvm`](https://github.com/nvm-sh/nvm) і Node.js 20 разом із npm:
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
+```
+
+Перезапустіть термінал або виконайте `source ~/.bashrc` чи `source ~/.zshrc`, а потім:
+
+```bash
+command -v nvm
+nvm install 20
+nvm alias default 20
+```
+
+### Windows
+
+Відкрийте PowerShell і встановіть Git:
+
+```powershell
+winget install --id Git.Git -e --source winget
+```
+
+Якщо `winget` недоступний, завантажте інсталятор із
+[git-scm.com](https://git-scm.com/install/windows). Після встановлення перезапустіть
+PowerShell.
+
+Node.js 20 разом із npm встановіть офіційним `.msi`:
+
+1. Відкрийте [архів останнього Node.js 20](https://nodejs.org/download/release/latest-v20.x/).
+2. Завантажте `node-v20.*-x64.msi` для звичайного Intel/AMD-комп'ютера або
+   `node-v20.*-arm64.msi` для Windows on ARM.
+3. Запустіть інсталятор із типовими налаштуваннями та перезапустіть PowerShell.
+
+Перевірка до клонування:
+
+```bash
+git --version
+node --version
+npm --version
+
+# достатньо однієї команди
+claude --version
+codex --version
+copilot --version
+cursor-agent --version
+```
+
+## Встановлення
+
+```bash
+git clone https://github.com/genkovich/url-shortener.git
+cd url-shortener
+```
+
+На macOS/Linux активуйте версію Node.js із `.nvmrc`:
+
+```bash
+nvm use
+```
+
+На macOS/Windows встановіть залежності та Chromium:
+
+```bash
+npm ci
+npx playwright install chromium
+```
+
+На Linux встановіть залежності, Chromium і потрібні йому системні бібліотеки:
+
+```bash
+npm ci
+npx playwright install --with-deps chromium
+```
+
+Docker, окремий SQLite, глобальні npm-пакети та SDD-плагіни не потрібні.
+
+## Перевірка середовища
+
+```bash
+npm run doctor
+npm run verify
+```
+
+`doctor` перевіряє Node.js, npm, Git, агенти та `node_modules`. `verify` додатково запускає
+всі ворота, включно з Playwright E2E. Зелений `verify` означає, що середовище готове.
+
+## Запуск
+
+```bash
+npm run dev
+```
+
+Застосунок: <http://localhost:3000>. Локальна база створюється автоматично в
+`data/links.db`.
+
+## Робота з фічею
+
+1. Прочитайте [`AGENTS.md`](AGENTS.md) і [`docs/architecture-map.md`](docs/architecture-map.md).
+2. Оберіть фічу з [`docs/roadmap.md`](docs/roadmap.md).
+3. Прочитайте `docs/features/<slug>/spec.md`, `tasks/_epic.md` і файл поточної задачі.
+4. Запустіть вендорений скіл `implement`:
+   - Claude Code: `/implement <slug>`
+   - Codex: `$sdd-implement <slug>`
+   - Cursor: `/` → `sdd-implement`
+5. Після кожної правки запускайте `npm run verify`.
+
+Скіл працює за циклом `RED → GREEN → REFACTOR → GATE → COMMIT`. Зовнішній плагін для нього
+не потрібен.
+
+## Команди
+
+| Команда | Призначення |
+|---|---|
+| `npm run dev` | локальний сервер на `http://localhost:3000` |
+| `npm run lint` | ESLint |
+| `npm run test:unit` | unit-тести |
+| `npm run test:integration` | integration-тести |
+| `npm run test:fast` | unit + integration без браузера |
+| `npm run test:e2e` | Playwright E2E на порту `3100` |
+| `npm test` | усі тести |
+| `npm run gate` | lint + усі тести |
+| `npm run doctor` | перевірка локального середовища |
+| `npm run verify` | усі детерміновані ворота |
+| `npm run tools:check` | синхронність вендорених скілів |
+| `npm run links:check` | валідність посилань у документації |
+
+## Автономний луп
+
+```bash
+git checkout -b feat/<slug>
+npm run ralph -- --feature <slug> --dry-run
+npm run ralph -- --feature <slug>
+```
+
+Луп не працює на `main` і не виконує `git push`. Повний протокол: [`loop/README.md`](loop/README.md).
 
 ## Структура
 
+```text
+src/                    код застосунку і frontend
+tests/                  unit, integration та e2e
+docs/features/<slug>/   SDD-пакети фіч
+docs/roadmap.md         черга фіч
+docs/architecture-map.md  архітектурні конвенції
+loop/                   автономний ранер
+scripts/                локальні ворота
 ```
-src/            shorten.js (домен) · app.js (роути) · db.js · server.js · public/ (frontend)
-tests/          unit/ · integration/ (Vitest) · e2e/ (Playwright)
-scripts/        verify.mjs · doctor.mjs · check-tools.mjs · lib.mjs — ворота, чистий Node
-docs/           architecture-map.md · CONTEXT.md · roadmap.md · adr/ · features/ · _templates/
-.claude/ .agents/ .codex/ .cursor/ .github/    вендорений скіл implement + три субагенти
-```
-
-## Ворота
-
-| Команда | Що перевіряє |
-|---|---|
-| `npm run lint` | ESLint по всьому репо |
-| `npm run test:fast` | unit + integration, без браузера — **per-task гейт** |
-| `npm run test:e2e` | Playwright на своєму порту :3100 і своїй базі |
-| `npm test` | усі три рівні |
-| `npm run gate` | `lint` + `npm test` |
-| `npm run tools:check` | вендоровані копії скіла не розійшлись між п'ятьма інструментами |
-| `npm run links:check` | у доці немає битих посилань, мертвих якорів і `[[wikilinks]]` |
-| `npm run verify` | усе вище однією командою, матриця, `exit 1` на червоному |
-
-У `verify` немає «м'яких» пропусків: зникне скрипт — матриця почервоніє. Єдиний свідомий
-пропуск — явний `npm run verify -- --skip-e2e`.
-
-## Як реалізується фіча
-
-Кожна фіча — це **SDD-пакет** під `docs/features/<slug>/`:
-
-```
-spec.md               контекст, user stories, acceptance-критерії (AC-01…AC-0N)
-sad.md                архітектурне рішення, C4, runtime-діаграма, quality goals
-contracts/openapi.yaml  HTTP-контракт: коди відповідей і схеми
-adr/0001-*.md         зафіксоване рішення з альтернативами і наслідками
-data-model.md         (якщо є міграція) ER, колонки, фікстури
-test-plan.md          рівні тестів, покриття AC, edge cases
-tasks.json            машинний контракт для скіла implement
-tasks/T1…T5.md        атомарні таски: GWT, чекліст кроків, edge cases, DoD
-tasks/_epic.md        граф залежностей (mermaid), хвилі, hard rules
-tasks/tracker.md      статуси
-```
-
-Порядок роботи:
-
-1. Обери фічу з `docs/roadmap.md` (секція **Now**, далі **Next**).
-2. Прочитай `spec.md` §5 і `tasks/_epic.md` — там граф і хвилі.
-3. Жени таски по TDD скілом `implement` (Claude Code: `/implement input-validation`;
-   Codex: `$sdd-implement input-validation`; Cursor: `/` → `sdd-implement`).
-4. Після кожного таска — `npm run test:fast`. Перед PR — `npm run verify`.
-5. Онови `tasks/tracker.md`.
-
-Скіл і три його субагенти (`test-author` → `implementer` → `reviewer`) вендоровані в репо
-під кожен з п'яти інструментів. **Плагін ставити не треба.** Крос-туловий довідник і повні
-конвенції — [`AGENTS.md`](AGENTS.md).
-
-## Беклог
-
-Готові пакети: [`base-vertical`](docs/features/base-vertical/) (shipped, worked example) ·
-[`input-validation`](docs/features/input-validation/) ·
-[`link-expiry`](docs/features/link-expiry/).
-
-Черга і залежності — [`docs/roadmap.md`](docs/roadmap.md). Конвенції, яких мусить триматися
-кожна фіча, — [`docs/architecture-map.md`](docs/architecture-map.md).
 
 ## Ліцензія
 
