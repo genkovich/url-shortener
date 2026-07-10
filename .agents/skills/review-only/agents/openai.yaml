@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Only"
+  short_description: "Read-only code review with cited findings"
+  default_prompt: "Use $review-only to review the current diff without editing files."
