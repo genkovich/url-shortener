@@ -22,9 +22,7 @@ const SKILL_DIRS = [
   '.cursor/skills/review-only',
   '.github/skills/review-only',
 ];
-const TASK = `Use the repository's review-only skill exactly as written to review src/shorten.js.
-Cite findings as file:line, write the review in English, and finish with exactly one
-VERDICT: ACCEPT, VERDICT: WARN, or VERDICT: REJECT.`;
+const TASK = 'Invoke the repository\'s review-only skill to review src/shorten.js.';
 
 const args = new Set(process.argv.slice(2));
 const allowedArgs = new Set(['--broken', '--dry-run', '--self-test', '--help']);

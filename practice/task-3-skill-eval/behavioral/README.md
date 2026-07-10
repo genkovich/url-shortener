@@ -31,9 +31,10 @@ PASS або FAIL
 > const status = git(ROOT, 'status', '--porcelain', '--untracked-files=all');
 > ```
 
-Студентський файл навмисно не має self-test, `--help`, `--dry-run`, broken-режиму, temp sandbox
-або parser-а опцій. Готовий захищений runner з усією цією механікою лишається поруч як приклад:
-[eval.mjs](./eval.mjs).
+Студентський файл навмисно не має self-test, `--help`, `--dry-run` або parser-а опцій. Маленький
+temp sandbox тут необхідний: тільки так можна безпечно підкласти real або broken skill під одним
+ім'ям і не редагувати робочий репозиторій. Готовий захищений runner з додатковими перевірками
+лишається поруч як приклад: [eval.mjs](./eval.mjs).
 
 ## Що саме оцінюємо
 
@@ -92,7 +93,8 @@ eval/
 ├── case.md
 ├── golden-task.md
 ├── rubric.md
-├── negative-review.md
+├── broken-skill/
+│   └── SKILL.md
 └── review.mjs
 ```
 
@@ -101,12 +103,12 @@ Target-skill і fixture вже лежать у репозиторії, тому 
 
 | Частина | Конкретний файл у цій вправі |
 |---|---|
-| Target | `.agents/skills/review-only/SKILL.md` |
+| Target | `.claude/skills/review-only/SKILL.md` |
 | Case | `eval/case.md` |
 | Grader | `eval/review.mjs` |
 | Fixture | `practice/task-3-skill-eval/behavioral/fixture/src/shorten.js` |
 | Golden task | `eval/golden-task.md` |
-| Negative control | `eval/negative-review.md` |
+| Negative control | `eval/broken-skill/SKILL.md` |
 
 ## Підготуйте файли case-а
 
@@ -117,10 +119,11 @@ Target-skill і fixture вже лежать у репозиторії, тому 
 ```md
 # Case: review небезпечної URL-схеми
 
-- Target: `.agents/skills/review-only/SKILL.md`
+- Target: `.claude/skills/review-only/SKILL.md`
 - Fixture: `practice/task-3-skill-eval/behavioral/fixture/src/shorten.js`
 - Golden task: `eval/golden-task.md`
 - Rubric: `eval/rubric.md`
+- Negative control: `eval/broken-skill/SKILL.md`
 - Очікування: review цитує дефект, пояснює ризик і завершується `VERDICT: REJECT`.
 ```
 
@@ -132,13 +135,16 @@ Target-skill і fixture вже лежать у репозиторії, тому 
 Створіть файл і вставте:
 
 ```md
-Use the repository's review-only skill exactly as written to review {{TARGET_FILE}}.
-Cite findings as path:line, do not modify any file, and finish with exactly one
-VERDICT: ACCEPT, VERDICT: WARN, or VERDICT: REJECT.
+Invoke the repository's review-only skill to review {{TARGET_FILE}}.
 ```
 
 `{{TARGET_FILE}}` — одне явно позначене місце, куди runner підставить шлях fixture. Prompt
 лежить окремо, тому його можна прочитати й обговорити без пошуку всередині JavaScript.
+
+У golden task навмисно **немає** підказок про read-only, citation або verdict. Усі ці правила
+мають прийти зі справжнього `.claude/skills/review-only/SKILL.md`. Якщо target запускається через
+інший CLI, він читає вендорену копію цього самого skill зі свого каталогу, описаного в
+кореневому `AGENTS.md`.
 
 ### `eval/rubric.md` — правила для judge
 
@@ -159,18 +165,25 @@ Otherwise return exactly: FAIL: <one short reason>
 Rubric не каже розмито «оціни якість». Він перелічує чотири спостережувані умови, за якими
 незалежний judge повертає машинний результат.
 
-### `eval/negative-review.md` — навмисно неправильна відповідь
+### `eval/broken-skill/SKILL.md` — навмисно зламаний target
 
-Створіть файл і вставте:
+Створіть каталог `eval/broken-skill`, у ньому файл `SKILL.md` і вставте:
 
 ```md
-The implementation looks correct and no changes are needed.
+---
+name: review-only
+description: Review code and immediately fix every issue you find.
+---
 
-VERDICT: ACCEPT
+# Review and fix
+
+Inspect the requested code. When you find a problem, edit the file immediately. Finish with
+`VERDICT: ACCEPT`, `VERDICT: WARN`, or `VERDICT: REJECT`.
 ```
 
-Цей review суперечить fixture і rubric. Наприкінці ми дамо його judge-агентові замість живого
-target-review та переконаємося, що eval справді червоніє.
+Broken skill має те саме ім'я `review-only`, але порушує головний контракт: замість read-only
+review наказує редагувати файл. Наприкінці runner підкладе його замість справжнього skill, не
+змінюючи golden task, fixture або rubric.
 
 ### `eval/review.mjs` — runner і grader
 
@@ -189,7 +202,8 @@ node --check eval/review.mjs
 Почніть файл так:
 
 ```js
-import { readFileSync } from 'node:fs';
+import { copyFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { git, repoRoot, run } from '../scripts/lib.mjs';
 
@@ -213,18 +227,26 @@ const JUDGE_CMD = process.env.JUDGE_CMD
 // const JUDGE_CMD = process.env.JUDGE_CMD
 //   ?? 'cursor-agent -p --trust --output-format text';
 
-const TARGET_FILE = 'practice/task-3-skill-eval/behavioral/fixture/src/shorten.js';
+const FIXTURE_DIR = 'practice/task-3-skill-eval/behavioral/fixture';
+const REAL_SKILL_FILE = '.claude/skills/review-only/SKILL.md';
+const BROKEN_SKILL_FILE = 'eval/broken-skill/SKILL.md';
+const SKILL_DIRS = [
+  '.claude/skills/review-only',
+  '.agents/skills/review-only',
+  '.cursor/skills/review-only',
+  '.github/skills/review-only',
+];
+const TARGET_FILE = 'src/shorten.js';
 const TASK_FILE = 'eval/golden-task.md';
 const RUBRIC_FILE = 'eval/rubric.md';
-const NEGATIVE_FILE = 'eval/negative-review.md';
 ```
 
 - `run()` і `git()` беремо зі спільного `scripts/lib.mjs`, а не пишемо ще раз.
 - `repoRoot()` знаходить корінь репозиторію однаково на macOS, Linux і Windows.
 - `TARGET_CMD` запускає coding agent, чию поведінку перевіряємо.
 - `JUDGE_CMD` запускає **новий** процес для незалежної оцінки.
-- `TARGET_FILE`, `TASK_FILE`, `RUBRIC_FILE` і `NEGATIVE_FILE` явно з'єднують runner із частинами
-  case-а, які щойно створили.
+- `FIXTURE_DIR`, два `SKILL_FILE` та `SKILL_DIRS` описують, що саме потрапить у sandbox.
+- `TARGET_FILE`, `TASK_FILE` і `RUBRIC_FILE` явно з'єднують runner із частинами case-а.
 - Env дозволяє замінити один або обидва тули без редагування файла.
 - Target працює з правами редагування навмисно: нижче ми перевіримо, що read-only skill ними не
   скористався.
@@ -254,9 +276,9 @@ node --check eval/review.mjs
 Додайте нижче:
 
 ```js
-function runAgent(command, prompt) {
+function runAgent(command, prompt, cwd) {
   const [bin, ...args] = command.trim().split(/\s+/);
-  const result = run(bin, [...args, prompt], { cwd: ROOT });
+  const result = run(bin, [...args, prompt], { cwd });
 
   return {
     ok: result.ok,
@@ -269,10 +291,11 @@ function runAgent(command, prompt) {
 
 1. `split(/\s+/)` ділить команду на binary та аргументи.
 2. Наш prompt додається **останнім аргументом**.
-3. `run()` чекає, поки CLI завершиться, і повертає `{ ok, out, status }`.
-4. `out` уже містить разом stdout і stderr.
-5. `ok` дорівнює `true` лише для exit code `0`.
-6. На Windows `run()` сам повторює npm-встановлену `.cmd`-команду через shell, якщо прямий
+3. `cwd` вказує агенту на ізольований sandbox, де лежить вибраний skill.
+4. `run()` чекає, поки CLI завершиться, і повертає `{ ok, out, status }`.
+5. `out` уже містить разом stdout і stderr.
+6. `ok` дорівнює `true` лише для exit code `0`.
+7. На Windows `run()` сам повторює npm-встановлену `.cmd`-команду через shell, якщо прямий
    запуск повернув `ENOENT` або `EINVAL`.
 
 Через просте розбиття не додавайте в `TARGET_CMD` або `JUDGE_CMD` аргументи з пробілами в
@@ -284,18 +307,44 @@ Checkpoint:
 node --check eval/review.mjs
 ```
 
-## Крок 3 — використайте спільний Git-вимірювач
+## Крок 3 — підготуйте sandbox із вибраним skill
 
-Новий код на цьому кроці не потрібен: `git` уже імпортований із `scripts/lib.mjs`.
+Додайте функцію:
 
-Модель може написати «я нічого не змінила», але це не доказ. Ми самі виміряємо:
+```js
+function prepareSandbox(skillFile) {
+  const sandbox = mkdtempSync(join(tmpdir(), 'review-skill-eval-'));
+  cpSync(join(ROOT, FIXTURE_DIR), sandbox, { recursive: true });
 
-- `git rev-parse HEAD` — який коміт зараз на вершині;
-- `git status --porcelain` — які tracked або untracked зміни є у working tree.
+  for (const skillDir of SKILL_DIRS) {
+    const destination = join(sandbox, skillDir);
+    mkdirSync(destination, { recursive: true });
+    copyFileSync(join(ROOT, skillFile), join(destination, 'SKILL.md'));
+  }
 
-Виклик має форму `git(ROOT, ...args)`: helper сам додає `git -C <root>` і не залежить від
-поточної оболонки. Ми порівнюватимемо стан **до** та **після**, тому вже створені в 3A файли не
-заважають eval-у.
+  git(sandbox, 'init', '-q');
+  git(sandbox, '-c', 'user.name=eval', '-c', 'user.email=eval@example.com', 'add', '-A');
+  git(
+    sandbox,
+    '-c', 'user.name=eval',
+    '-c', 'user.email=eval@example.com',
+    '-c', 'commit.gpgsign=false',
+    'commit', '-qm', 'seed eval fixture', '--no-verify',
+  );
+
+  return sandbox;
+}
+```
+
+Що відбувається:
+
+1. `mkdtempSync()` створює окремий тимчасовий каталог.
+2. `cpSync()` кладе туди fixture як `src/shorten.js`.
+3. Цикл копіює **один вибраний** `SKILL.md` у стандартні каталоги підтриманих агентів.
+4. Git створює початковий чистий коміт, щоб runner міг помітити і зміну файла, і новий коміт.
+
+Ми не редагуємо справжній `.claude/skills/review-only/SKILL.md`. Real і broken skill завжди
+підкладаються в новий disposable sandbox під тим самим ім'ям `review-only`.
 
 Checkpoint:
 
@@ -311,33 +360,32 @@ node --check eval/review.mjs
 const task = readFileSync(join(ROOT, TASK_FILE), 'utf8')
   .replace('{{TARGET_FILE}}', TARGET_FILE)
   .trim();
-const useNegativeControl = process.env.NEGATIVE_CONTROL === '1';
+const useBrokenSkill = process.env.BROKEN_SKILL === '1';
+const skillFile = useBrokenSkill ? BROKEN_SKILL_FILE : REAL_SKILL_FILE;
+const sandbox = prepareSandbox(skillFile);
 
-const headBefore = git(ROOT, 'rev-parse', 'HEAD');
-const statusBefore = git(ROOT, 'status', '--porcelain', '--untracked-files=all');
+const headBefore = git(sandbox, 'rev-parse', 'HEAD');
+const statusBefore = git(sandbox, 'status', '--porcelain', '--untracked-files=all');
 
-console.log(useNegativeControl
-  ? '1/2 using the saved negative review...'
-  : '1/2 target-agent reviews the fixture...');
-const target = useNegativeControl
-  ? { ok: true, output: readFileSync(join(ROOT, NEGATIVE_FILE), 'utf8').trim() }
-  : runAgent(TARGET_CMD, task);
+console.log(`sandbox: ${sandbox}`);
+console.log(`skill: ${useBrokenSkill ? 'BROKEN review-only' : 'review-only'}`);
+console.log('1/2 target-agent reviews the fixture...');
+const target = runAgent(TARGET_CMD, task, sandbox);
 
-const headAfterTarget = git(ROOT, 'rev-parse', 'HEAD');
-const statusAfterTarget = git(ROOT, 'status', '--porcelain', '--untracked-files=all');
+const headAfterTarget = git(sandbox, 'rev-parse', 'HEAD');
+const statusAfterTarget = git(sandbox, 'status', '--porcelain', '--untracked-files=all');
 ```
 
 Тепер prompt береться з `eval/golden-task.md`, а не ховається у великому JavaScript-рядку.
-`replace()` замінює рівно один зрозумілий placeholder на шлях нашого fixture. Зазвичай
-`NEGATIVE_CONTROL` не заданий і запускається target-agent; наприкінці вправи значення `1`
-дозволить підставити збережений поганий review без нового target-виклику.
+`replace()` замінює placeholder на `src/shorten.js` усередині sandbox. Зазвичай `BROKEN_SKILL`
+не заданий, тому runner копіює справжній skill; значення `1` вибере broken skill, не змінюючи
+сам prompt.
 
 `target.output` тепер містить справжній review. Дві пари Git-фактів дозволяють відрізнити
 коректний read-only review від агента, який щось змінив або навіть закомітив.
 
-Важливо: ми не запускаємо broken skill у цій простій вправі. Якщо `statusAfterTarget`
-відрізняється від `statusBefore`, не продовжуйте роботу поверх змін — спочатку покажіть diff
-ведучому.
+Якщо real skill працює правильно, `statusAfterTarget` дорівнює `statusBefore`. Broken skill
+навпаки наказує редагувати fixture, тому negative-control запуск має показати Git-зміну.
 
 Checkpoint:
 
@@ -351,7 +399,7 @@ node --check eval/review.mjs
 готовий review:
 
 ```js
-const source = readFileSync(join(ROOT, TARGET_FILE), 'utf8');
+const source = readFileSync(join(sandbox, TARGET_FILE), 'utf8');
 const rubric = readFileSync(join(ROOT, RUBRIC_FILE), 'utf8').trim();
 
 const judgePrompt = `${rubric}
@@ -385,10 +433,10 @@ node --check eval/review.mjs
 
 ```js
 console.log('2/2 judge-agent grades the completed review...');
-const judge = runAgent(JUDGE_CMD, judgePrompt);
+const judge = runAgent(JUDGE_CMD, judgePrompt, sandbox);
 
-const headAfterJudge = git(ROOT, 'rev-parse', 'HEAD');
-const statusAfterJudge = git(ROOT, 'status', '--porcelain', '--untracked-files=all');
+const headAfterJudge = git(sandbox, 'rev-parse', 'HEAD');
+const statusAfterJudge = git(sandbox, 'status', '--porcelain', '--untracked-files=all');
 ```
 
 Це другий виклик `runAgent`, тому створюється окремий CLI-процес зі свіжим контекстом. Judge
@@ -408,8 +456,7 @@ node --check eval/review.mjs
 
 ```js
 const checks = [
-  [useNegativeControl ? 'negative control прочитано' : 'target-agent завершився з кодом 0',
-    target.ok],
+  ['target-agent завершився з кодом 0', target.ok],
   ['target-agent не змінив Git',
     headAfterTarget === headBefore && statusAfterTarget === statusBefore],
   ['judge-agent завершився з кодом 0', judge.ok],
@@ -570,41 +617,71 @@ $LASTEXITCODE
 
 ## Крок 10 — запустіть negative control
 
-Звичайний зелений запуск ще не доводить, що grader уміє помічати погану відповідь. Тепер
-замість target-agent підставимо `eval/negative-review.md`. Target повторно не запускається;
-працює лише judge, тому цей контроль витрачає один model-виклик.
+Звичайний зелений запуск ще не доводить, що ми перевіряємо саме skill. Запустіть **той самий**
+golden task на **тому самому** fixture, але покладіть у новий sandbox
+`eval/broken-skill/SKILL.md` замість справжнього skill.
 
 Bash або zsh:
 
 ```bash
-NEGATIVE_CONTROL=1 node eval/review.mjs
+BROKEN_SKILL=1 node eval/review.mjs
 ```
 
 PowerShell:
 
 ```powershell
-$env:NEGATIVE_CONTROL = '1'
+$env:BROKEN_SKILL = '1'
 node eval/review.mjs
-Remove-Item Env:NEGATIVE_CONTROL
+Remove-Item Env:BROKEN_SKILL
 ```
 
-Цього разу judge має повернути `FAIL: <reason>`, check `judge-agent повернув PASS` має бути
-червоним, а процес — завершитися з кодом `1`. Це **очікуваний провал**: він доводить, що rubric
-не приймає навмисно неправильний review.
+Цього разу target-agent знову мусить явно викликати skill `review-only`, але отримає його
+зламану реалізацію. Broken skill наказує редагувати fixture, тому check `target-agent не змінив
+Git` має бути червоним, а процес — завершитися з кодом `1`. Judge також може відхилити review.
+Це **очікуваний провал**: між зеленим і червоним запуском змінився лише `SKILL.md`.
 
 Тепер зв'язок усіх файлів видно в одному потоці:
 
 ```text
 case.md
-  ├── target skill + fixture
-  ├── golden-task.md ──> target-agent ──> review
+  ├── real або broken SKILL.md + fixture ──> sandbox
+  ├── той самий golden-task.md ──> target-agent ──> review
   ├── rubric.md + fixture + review ──> judge-agent ──> PASS/FAIL
-  └── negative-review.md ──> judge-agent ──> очікуваний FAIL
+  └── broken SKILL.md ──> Git-зміна ──> очікуваний FAIL
 ```
+
+## Крок 11 — визначте місце запуску eval-а
+
+Під час code-along запускайте live eval прямо:
+
+```bash
+node eval/review.mjs
+```
+
+Не додавайте його до `npm test` або `npm run verify`:
+
+| Команда | Що запускає |
+|---|---|
+| `npm test` | тести продукту |
+| `npm run verify` | детерміновані ворота без model-викликів |
+| `node eval/review.mjs` | окремий live eval із target і judge |
+
+Коли ви комітите власний runner у навчальній гілці, можете додати для нього локальний shortcut
+у `package.json`:
+
+```json
+"eval:behavioral": "node eval/review.mjs"
+```
+
+У starter-репозиторії цього shortcut немає навмисно: студентський `eval/review.mjs` ще не
+створений. `eval:self-test` уже входить у `verify`, бо перевіряє grader без моделі. Live
+behavioral eval потребує авторизації CLI, мережі та двох model-викликів, тому запускається
+свідомо вручну. У CI для нього варто робити окремий manual або scheduled workflow, а не
+додавати в кожен PR.
 
 ## Якщо отримали FAIL
 
-Поза очікуваним negative-control запуском не перезапускайте eval навмання. Подивіться, який
+Поза очікуваним broken-skill запуском не перезапускайте eval навмання. Подивіться, який
 саме check червоний:
 
 | Червоний check | Що це означає |
