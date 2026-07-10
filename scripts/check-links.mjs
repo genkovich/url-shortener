@@ -71,7 +71,9 @@ const ghSlug = (heading) =>
 /** Усі якорі файла — по одному на кожен `#`-заголовок. */
 function anchorsOf(path) {
   const found = new Set();
-  for (const line of readFileSync(path, 'utf8').split('\n')) {
+  // Git checkout на Windows зазвичай дає CRLF. Якщо різати лише по `\n`, кожен
+  // заголовок лишається з `\r`, і regex з `$` його вже не розпізнає.
+  for (const line of readFileSync(path, 'utf8').split(/\r?\n/)) {
     const heading = /^#{1,6}\s+(.*)$/.exec(line);
     if (heading) found.add(ghSlug(heading[1]));
   }
@@ -89,7 +91,7 @@ function anchorsOf(path) {
 function toProse(text) {
   let insideFence = false;
   return text
-    .split('\n')
+    .split(/\r?\n/)
     .map((line) => {
       if (/^\s*```/.test(line)) {
         insideFence = !insideFence;
