@@ -247,6 +247,3 @@ claude --permission-mode auto
 
 `/loop` потребує Claude Code 2.1.72 або новішого, працює лише поки сесія відкрита й успадковує
 її дозволи. `Esc` скасовує наступне пробудження.
-
-У [практиці 4](../task-4-self-improvement/README.md) цей runner отримає окрему reflection-смугу,
-яка покращує `PROMPT.md` лише через RED → GREEN eval.
