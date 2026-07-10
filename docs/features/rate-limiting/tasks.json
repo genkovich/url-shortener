@@ -1,0 +1,75 @@
+{
+  "slug": "rate-limiting",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Domain: pure token-bucket limiter with an injected clock",
+      "layer": "domain",
+      "wave": 1,
+      "priority": "Must",
+      "estimate": "M",
+      "deps": [],
+      "blocks": ["T2"],
+      "acs": ["AC-03", "AC-04"],
+      "dod": "src/rate-limit.js exports createRateLimiter({ max, windowMs, now = Date.now }) -> { take(key), size() }; take returns { allowed: true } or { allowed: false, retryAfterMs } with retryAfterMs strictly > 0; refill is fractional (elapsed * max / windowMs, clamped at max); a refusal consumes no token; buckets idle for >= windowMs are deleted by a lazy pass amortised to at most one per windowMs; no setInterval, no process.env, no import from express or from src/shorten.js",
+      "files_hint": ["src/rate-limit.js"],
+      "context_budget": "~2500 tokens"
+    },
+    {
+      "id": "T2",
+      "title": "App: limiter middleware on `POST /api/shorten` → 429 + Retry-After",
+      "layer": "app",
+      "wave": 2,
+      "priority": "Must",
+      "estimate": "S",
+      "deps": ["T1"],
+      "blocks": ["T3"],
+      "acs": ["AC-01", "AC-02", "AC-05"],
+      "dod": "createApp(db, { rateLimiter } = {}) accepts an injected limiter and defaults to one; the middleware is mounted on POST /api/shorten only and calls take(req.ip ?? 'unknown'); on refusal it answers 429 { error: 'rate limited' } with Retry-After = String(Math.max(1, Math.ceil(retryAfterMs / 1000))) and writes nothing; GET /:code, GET /api/links, GET /api/stats/:code and /healthz are untouched; the seed suites pass unmodified",
+      "files_hint": ["src/app.js"],
+      "context_budget": "~2500 tokens"
+    },
+    {
+      "id": "T3",
+      "title": "App: env configuration and wiring",
+      "layer": "app",
+      "wave": 2,
+      "priority": "Must",
+      "estimate": "S",
+      "deps": ["T2"],
+      "blocks": ["T4", "T5"],
+      "acs": ["AC-01", "AC-06"],
+      "dod": "src/app.js exports readRateLimitEnv(env = process.env) returning { max, windowMs }, parsing with Number and accepting only positive integers, falling back to 60 / 60000 otherwise; createApp's default limiter is built from it; src/server.js prints the effective pair once at boot because nothing in this repo loads .env; .env.example already declares both keys and is verified, not duplicated",
+      "files_hint": ["src/server.js", "src/app.js", ".env.example"],
+      "context_budget": "~2000 tokens"
+    },
+    {
+      "id": "T4",
+      "title": "Frontend: show the 429 and the wait",
+      "layer": "ui",
+      "wave": 3,
+      "priority": "Should",
+      "estimate": "S",
+      "deps": ["T3"],
+      "blocks": [],
+      "acs": ["AC-02", "AC-07"],
+      "dod": "on a 429 the existing #error paragraph names the limit and the seconds read from the Retry-After response header, falling back to a message without a number when the header is missing or unparseable; the URL field keeps what the visitor typed; no limit rule, no capacity and no window exists anywhere under src/public/; AC-07 verified by hand per test-plan.md",
+      "files_hint": ["src/public/app.js", "src/public/style.css"],
+      "context_budget": "~2000 tokens"
+    },
+    {
+      "id": "T5",
+      "title": "Tests: unit with fake timers + integration with an injected limiter",
+      "layer": "tests",
+      "wave": 3,
+      "priority": "Must",
+      "estimate": "M",
+      "deps": ["T3"],
+      "blocks": [],
+      "acs": ["AC-01", "AC-02", "AC-03", "AC-04", "AC-05", "AC-06", "AC-07"],
+      "dod": "npm run test:fast green; the fake clock is the injected now, never vi.useFakeTimers(); Retry-After is asserted against /^[1-9][0-9]*$/; a poll interval that does not divide windowMs / max pins the fractional refill; a 429 leaves the row count unchanged; every read path answers with an empty bucket; the sweep frees buckets without granting tokens; the three mutations in the checklist each turn a named test red",
+      "files_hint": ["tests/unit/rate-limit.test.js", "tests/integration/rate-limit.test.js"],
+      "context_budget": "~3000 tokens"
+    }
+  ]
+}

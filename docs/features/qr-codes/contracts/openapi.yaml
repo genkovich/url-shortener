@@ -1,0 +1,81 @@
+openapi: 3.0.3
+info:
+  title: url-shortener — qr-codes (delta over base-vertical)
+  version: 0.3.0
+  description: >
+    Replaces the `501` stub on `GET /api/qr/{code}` with a QR code of the link's absolute
+    short URL, rendered as SVG. The response body is an image, not JSON. Unknown codes are
+    refused with `404 { error: 'not found' }`; expired links with `410 { error: 'gone' }`,
+    the string `link-expiry` defines — but that branch exists only once the `link-expiry`
+    feature is shipped. Reading this resource is never a click: `clicks` is unchanged by any
+    number of requests. Only the changed operation is shown; the base-vertical contract
+    otherwise stands.
+security: []
+paths:
+  /api/qr/{code}:
+    get:
+      summary: QR code of a link's absolute short URL, as SVG
+      operationId: getLinkQr
+      parameters:
+        - name: code
+          in: path
+          required: true
+          description: >
+            The link's public handle, exactly as `POST /api/shorten` returned it. Never
+            suffixed: Express captures the whole path segment, so `/api/qr/abc.svg` looks up
+            a link whose code is the literal string `abc.svg` and answers `404`.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: >
+            The QR code. Its encoded payload is the absolute short URL
+            `{scheme}://{host}/{code}` — byte-for-byte the `short_url` that
+            `POST /api/shorten` returns — and never the bare code. Rendering does not
+            resolve the link and does not count a click.
+          headers:
+            Cache-Control:
+              description: >
+                Always `public, max-age=31536000, immutable`. A code maps to exactly one
+                address for its lifetime, so the picture of it never changes. The cache
+                holds an image, not a permission: following the scanned link still goes
+                through `GET /{code}`, where expiry is enforced.
+              schema:
+                type: string
+                example: public, max-age=31536000, immutable
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+                description: >
+                  An SVG document with an `<svg>` root element. Express appends
+                  `; charset=utf-8` to the `Content-Type` of any string response body, so
+                  the header on the wire is `image/svg+xml; charset=utf-8`. Clients — and
+                  tests — must match the media type as a prefix, not by equality.
+        '404':
+          description: No link exists under this code. Nothing is rendered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '410':
+          description: >
+            The link exists but its lifetime has passed, so its QR would lead to a `410`.
+            This branch exists only once `link-expiry` is shipped; until then no link can
+            expire and every existing code answers `200`. The body string is `gone`, the
+            name `link-expiry` gives this condition on `GET /{code}`: that feature owns the
+            expiry semantics, and this one only observes them.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: string
+          enum: [not found, gone]

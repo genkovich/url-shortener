@@ -1,0 +1,155 @@
+openapi: 3.0.3
+info:
+  title: url-shortener — bulk-and-delete (delta over base-vertical)
+  version: 0.3.0
+  description: >
+    Adds two operations. `DELETE /api/{code}` removes a link outright — no tombstone, no
+    filtered-out ghost row — and answers `204` with no body, or `404` when the code is not
+    a link. `POST /api/shorten/bulk` creates up to 100 links in one request and answers `200`
+    with one result per input URL, in input order. A single invalid URL refuses only itself;
+    its neighbours are created. Only the new operations are shown; the base-vertical contract
+    otherwise stands.
+security: []
+paths:
+  /api/shorten/bulk:
+    post:
+      summary: Create up to 100 short links in one request, with per-URL outcomes
+      operationId: createLinksBulk
+      description: >
+        The batch itself succeeds whenever it was well-formed: `200` means the server attempted
+        every create it was asked to attempt, not that every create succeeded. Per-URL outcomes
+        live in the body. `207 Multi-Status` was considered and rejected — see sad.md §4.
+
+        Note on route order: this path is not shadowed by `POST /api/shorten`. A literal path
+        does not match a longer one, and Express path parameters do not span `/` (measured,
+        express 4.22.2).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkShortenRequest'
+      responses:
+        '200':
+          description: >
+            The batch was accepted and processed. The array has exactly as many entries as
+            `urls`, in the same order: `results[i]` describes `urls[i]`. An entry either carries
+            a `code` or an `error`, never both.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkResult'
+        '400':
+          description: >
+            The batch was refused as a whole, and nothing was written. `error` is `no urls` when
+            `urls` is absent, not an array, or empty; `too many urls` when it holds more than 100
+            entries. Both checks run before the first insert.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: >
+            The request body exceeded `express.json()`'s 100 kB limit and was refused by the body
+            parser before this route ran. Measured: 50 URLs at the 2048-character maximum make a
+            102 560-byte body. The app's error middleware renders this as `{ error: 'bad request' }`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/{code}:
+    delete:
+      summary: Delete a link by its code (hard delete)
+      operationId: deleteLink
+      description: >
+        Removes the row. The click count is destroyed with it, and the code becomes free — a later
+        link, including one claimed by `custom-alias`, may take it. Deletion is irreversible and
+        unauthenticated: anyone who can reach the service can delete any link.
+
+        Note on route order: this path matches **any** single-segment path under `/api`. A literal
+        `DELETE /api/links` must be declared above it, or it will be swallowed (measured).
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: >
+            The link was deleted. **No response body**, and no `content-type` header — a `204`
+            carries neither. `res.status(204).json({ … })` discards its argument silently.
+        '404':
+          description: >
+            No link has that code. Also the answer to a second `DELETE` of the same code: the row
+            is already gone. The method remains idempotent in the sense RFC 9110 gives the word —
+            the state after two requests equals the state after one — while the *responses* differ.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    BulkShortenRequest:
+      type: object
+      additionalProperties: false
+      required: [urls]
+      properties:
+        urls:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: string
+          description: >
+            One entry per link to create. Each is validated and de-duplicated by the same rules
+            as `POST /api/shorten` (feature `input-validation`). Duplicates inside one array are
+            collapsed: the second occurrence returns the first one's code with `created: false`.
+    BulkResult:
+      type: array
+      description: >
+        Positionally aligned with the request's `urls`. Same length, same order.
+      items:
+        oneOf:
+          - $ref: '#/components/schemas/BulkItemCreated'
+          - $ref: '#/components/schemas/BulkItemRefused'
+    BulkItemCreated:
+      type: object
+      additionalProperties: false
+      required: [url, code, created]
+      properties:
+        url:
+          type: string
+          description: The input entry, echoed verbatim — not the trimmed form that was stored.
+        code:
+          type: string
+        created:
+          type: boolean
+          description: >
+            `true` when a row was inserted. `false` when this URL was already stored — either by
+            an earlier request or by an earlier entry of this same array — and `code` is the
+            existing link's code.
+    BulkItemRefused:
+      type: object
+      additionalProperties: false
+      required: [url, error]
+      properties:
+        url:
+          type: string
+          description: >
+            The input entry, echoed verbatim. A non-string entry is echoed as received, so a strict
+            validator will flag it against this `type`. Dropping the entry would break the
+            positional alignment the whole response rests on; coercing it would invent a URL the
+            caller never sent.
+        error:
+          type: string
+          description: The `reason` of the `ValidationError` this entry raised.
+          enum: [url required, url too long, malformed url, unsafe scheme]
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: string
+          enum: [no urls, too many urls, not found, bad request]

@@ -1,0 +1,75 @@
+{
+  "slug": "qr-codes",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Domain: renderQrSvg(text) — async SVG renderer over qrcode",
+      "layer": "domain",
+      "wave": 1,
+      "priority": "Must",
+      "estimate": "S",
+      "deps": [],
+      "blocks": ["T2"],
+      "acs": ["AC-01", "AC-02"],
+      "dod": "new module src/qr.js exports renderQrSvg(text) returning a Promise of an SVG string via QRCode.toString(text, { type: 'svg' }); qrcode ^1.5 added to dependencies per ADR-0001; the module imports no express and no better-sqlite3, and src/shorten.js still imports only node:crypto; tests pin that the render is deterministic for a given text and that the payload is not echoed into the markup",
+      "files_hint": ["src/qr.js"],
+      "context_budget": "~2000 tokens"
+    },
+    {
+      "id": "T2",
+      "title": "App: GET /api/qr/:code — svg body, content-type, cache header, 404/410",
+      "layer": "app",
+      "wave": 2,
+      "priority": "Must",
+      "estimate": "S",
+      "deps": ["T1"],
+      "blocks": ["T3", "T4"],
+      "acs": ["AC-01", "AC-02", "AC-03", "AC-04", "AC-05", "AC-07"],
+      "dod": "the 501 stub is replaced by an async handler that probes the store with getStats (never resolveLink), answers 404 { error: 'not found' } for an unknown code, renders renderQrSvg(`${req.protocol}://${req.get('host')}/${code}`) inside a try/catch whose catch calls next(err), and sends the svg with res.type('svg') plus Cache-Control: public, max-age=31536000, immutable; the route stays above the catch-all GET /:code; clicks is unchanged by any number of requests; the 410 branch is written only once link-expiry is shipped",
+      "files_hint": ["src/app.js"],
+      "context_budget": "~2500 tokens"
+    },
+    {
+      "id": "T3",
+      "title": "Frontend: QR button in the links table",
+      "layer": "ui",
+      "wave": 3,
+      "priority": "Should",
+      "estimate": "S",
+      "deps": ["T2"],
+      "blocks": ["T5"],
+      "acs": ["AC-06"],
+      "dod": "each row of Мої лінки carries a QR button that reveals an <img src=\"/api/qr/<code>\"> for that row; the code is never suffixed with .svg; the image is loaded by the browser as an image, never fetched and injected as inline <svg> or <object>; no QR rule and no qrcode library reaches src/public/; proven by tests/e2e/qr.spec.js",
+      "files_hint": ["src/public/app.js", "src/public/index.html", "src/public/style.css"],
+      "context_budget": "~2000 tokens"
+    },
+    {
+      "id": "T4",
+      "title": "Tests: unit + integration for AC-01..05, AC-07",
+      "layer": "tests",
+      "wave": 3,
+      "priority": "Must",
+      "estimate": "S",
+      "deps": ["T2"],
+      "blocks": [],
+      "acs": ["AC-01", "AC-02", "AC-03", "AC-04", "AC-05", "AC-07"],
+      "dod": "npm run test:fast green; the media type is asserted as a prefix; the body is compared against renderQrSvg of the expected absolute short_url with the Host header pinned, and asserted different from renderQrSvg of the bare code; clicks are read before and after through GET /api/stats/:code; a rejected render yields 500 rather than a hung request; the AC-04 case is added only when link-expiry ships",
+      "files_hint": ["tests/unit/qr.test.js", "tests/integration/qr.test.js"],
+      "context_budget": "~3000 tokens"
+    },
+    {
+      "id": "T5",
+      "title": "Tests: e2e through the UI",
+      "layer": "tests",
+      "wave": 3,
+      "priority": "Should",
+      "estimate": "S",
+      "deps": ["T3"],
+      "blocks": [],
+      "acs": ["AC-06", "AC-07"],
+      "dod": "npm run test:e2e green; a real browser activates the QR button, the image is visible and decoded (naturalWidth > 0), and the row's click count is the same after the browser has actually fetched /api/qr/<code>",
+      "files_hint": ["tests/e2e/qr.spec.js"],
+      "context_budget": "~2000 tokens"
+    }
+  ]
+}

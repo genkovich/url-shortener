@@ -1,0 +1,78 @@
+openapi: 3.0.3
+info:
+  title: url-shortener — rate-limiting (delta over base-vertical)
+  version: 0.4.0
+  description: >
+    Adds a per-client-IP rate limit to link creation. `POST /api/shorten` gains one response:
+    `429`, carrying a `Retry-After` header with the whole number of seconds until the client's
+    bucket holds a token again. Nothing else changes — the request body, the `201` response,
+    and every read operation are exactly as base-vertical describes them. Read paths
+    (`GET /:code`, `GET /api/links`, `GET /api/stats/:code`, `/healthz`) are never limited and
+    are therefore not restated here.
+security: []
+paths:
+  /api/shorten:
+    post:
+      summary: Create a short link — subject to a per-IP rate limit
+      operationId: createLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShortenRequest'
+      responses:
+        '201':
+          description: >
+            Link created. The client held at least one token, and exactly one was consumed.
+            No `Retry-After` header is sent on this response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Link'
+        '429':
+          description: >
+            The client's bucket holds less than one token. Nothing was written: no link exists
+            as a result of this request, and the refusal itself consumes no token, so repeated
+            attempts do not push the client's recovery further away.
+          headers:
+            Retry-After:
+              required: true
+              description: >
+                Whole seconds until the bucket holds one token again, rounded up. Always `1` or
+                more: `0` is a legal `delay-seconds` per RFC 9110 §10.2.3 and means "retry
+                immediately", which would turn a refusal into a busy-wait. A client that waits
+                exactly this long is served on its next attempt.
+              schema:
+                type: integer
+                minimum: 1
+              example: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    ShortenRequest:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        url:
+          type: string
+    Link:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        short_url:
+          type: string
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: string
+          enum: [rate limited]

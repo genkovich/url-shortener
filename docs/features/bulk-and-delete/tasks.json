@@ -1,0 +1,75 @@
+{
+  "slug": "bulk-and-delete",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Domain: deleteLink(db, code) — hard delete, boolean outcome",
+      "layer": "domain",
+      "wave": 1,
+      "priority": "Must",
+      "estimate": "S",
+      "deps": [],
+      "blocks": ["T3"],
+      "acs": ["AC-01", "AC-02", "AC-08"],
+      "dod": "deleteLink(db, code) issues one DELETE FROM links WHERE code = ? and returns true when the driver reports changes === 1, false when 0; no preceding SELECT, no deleted_at column, no migration, and no filter added to resolveLink / listLinks / getStats; pure domain, no Express import",
+      "files_hint": ["src/shorten.js"],
+      "context_budget": "~2000 tokens"
+    },
+    {
+      "id": "T2",
+      "title": "Domain: createLinksBulk(db, urls) — per-item validation, dedup, order",
+      "layer": "domain",
+      "wave": 1,
+      "priority": "Must",
+      "estimate": "M",
+      "deps": [],
+      "blocks": ["T3"],
+      "acs": ["AC-03", "AC-04", "AC-05", "AC-06", "AC-07"],
+      "dod": "createLinksBulk(db, urls) throws BulkError with reason 'no urls' when urls is absent, not an array or empty, and 'too many urls' above 100 — both checks before the first insert; then calls createLink once per url in input order, catching only ValidationError into { url, error: reason }; returns exactly one entry per input entry; the loop is not wrapped in a transaction and no unexpected error is swallowed",
+      "files_hint": ["src/shorten.js"],
+      "context_budget": "~3000 tokens"
+    },
+    {
+      "id": "T3",
+      "title": "App: routes — 204/404 delete, 200/400 bulk, and the DELETE order rule",
+      "layer": "app",
+      "wave": 2,
+      "priority": "Must",
+      "estimate": "S",
+      "deps": ["T1", "T2"],
+      "blocks": ["T4", "T5"],
+      "acs": ["AC-01", "AC-02", "AC-03", "AC-04", "AC-05", "AC-06", "AC-07"],
+      "dod": "DELETE /api/:code replaces its own 501 stub and answers 204 with no body or 404 { error: 'not found' }; POST /api/shorten/bulk answers 200 with the result array or 400 { error }; DELETE /api/:code is declared below every literal DELETE /api/... route and carries the comment that says why; GET /:code stays last; res.status(204).json is never used; existing tests stay green",
+      "files_hint": ["src/app.js"],
+      "context_budget": "~3000 tokens"
+    },
+    {
+      "id": "T4",
+      "title": "Frontend: delete button per row + bulk paste field",
+      "layer": "ui",
+      "wave": 3,
+      "priority": "Should",
+      "estimate": "M",
+      "deps": ["T3"],
+      "blocks": [],
+      "acs": ["AC-01", "AC-03", "AC-06"],
+      "dod": "each row carries a delete button guarded by confirm() whose handler never calls res.json() on the 204; a textarea submits one url per line as { urls } and renders a per-line outcome (created / duplicate / error); no batch or url rule is duplicated in the browser; the links table is not grown as an innerHTML template; proven by tests/e2e/bulk-and-delete.spec.js",
+      "files_hint": ["src/public/app.js", "src/public/index.html", "src/public/style.css"],
+      "context_budget": "~2500 tokens"
+    },
+    {
+      "id": "T5",
+      "title": "Tests: unit + integration for AC-01..08",
+      "layer": "tests",
+      "wave": 3,
+      "priority": "Must",
+      "estimate": "M",
+      "deps": ["T3"],
+      "blocks": [],
+      "acs": ["AC-01", "AC-02", "AC-03", "AC-04", "AC-05", "AC-06", "AC-07", "AC-08"],
+      "dod": "npm run test:fast green; AC-04 asserts zero rows and uses short urls so the body stays under 100 kB, AC-07 asserts a single row for a duplicate inside one batch, AC-08 asserts the freed code is insertable again, a non-ValidationError throw is proven to propagate out of createLinksBulk, and DELETE /api/links is pinned at 404 to document the swallow",
+      "files_hint": ["tests/unit/bulk-and-delete.test.js", "tests/integration/bulk-and-delete.test.js"],
+      "context_budget": "~3500 tokens"
+    }
+  ]
+}
