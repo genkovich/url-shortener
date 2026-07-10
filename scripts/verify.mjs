@@ -24,7 +24,7 @@ const skipE2e = argv.includes('--skip-e2e');
 const failFast = argv.includes('--fail-fast');
 
 // ⚠ Читаємо файл, а не `node -p "require(…)"`: під `"type": "module"` це вже не CommonJS,
-// а на Windows `run()` іде через shell і лапки перетворюються на кашу.
+// а ще один shell-рівень додає кросплатформове екранування без користі.
 const scripts = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).scripts ?? {};
 const hasScript = (name) => Object.hasOwn(scripts, name);
 
@@ -55,11 +55,12 @@ function npmGate(script, { args = [], label = script } = {}) {
     killListeners(3100);
   }
 
-  const { ok, status } = run('npm', ['run', '--silent', script, ...(args.length ? ['--', ...args] : [])], {
+  const { ok, out, status } = run('npm', ['run', '--silent', script, ...(args.length ? ['--', ...args] : [])], {
     cwd: root,
-    stdio: 'ignore',
   });
-  return record(label, ok ? 'ok' : 'fail', ok ? '' : `exit ${status}`);
+  const gateStatus = record(label, ok ? 'ok' : 'fail', ok ? '' : `exit ${status}`);
+  if (!ok && out.trim()) console.error(`\n--- ${label} output ---\n${out.trimEnd()}\n--- end ${label} output ---`);
+  return gateStatus;
 }
 
 // ── Прогін ───────────────────────────────────────────────────────────────────────

@@ -106,8 +106,9 @@ const count = (status) =>
     ? [...readFileSync(TRACKER, 'utf8').matchAll(new RegExp(`^\\|\\s*T\\d+\\s*\\|.*\\|\\s*${status}\\s*\\|`, 'gm'))].length
     : 0;
 
-// `run()` з lib тримає інваріант `shell: win32` — без нього `npm.cmd` на Windows не спавниться,
-// і гейт мовчки НЕ ЗАПУСКАЄТЬСЯ. Той самий гейт, що в `npm run verify`, тільки без e2e:
+// `run()` з lib вміє відкотитись на Windows shell для `npm.cmd`, але не ганяє через
+// shell звичайні `.exe`. Без цього гейт на Windows мовчки НЕ ЗАПУСКАЄТЬСЯ. Той самий гейт,
+// що в `npm run verify`, тільки без e2e:
 // браузер довгий, і його ганяє агент там, де цього вимагає DoD задачі.
 const gateIsGreen = () => GATE.every((s) => run('npm', ['run', s], { cwd: ROOT, stdio: 'ignore' }).ok);
 

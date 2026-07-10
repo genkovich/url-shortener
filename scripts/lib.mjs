@@ -15,11 +15,24 @@ export function repoRoot(importMetaUrl) {
 
 /** Запускає команду і повертає { ok, out }. Ніколи не кидає. */
 export function run(cmd, args, options = {}) {
-  const result = spawnSync(cmd, args, {
+  const spawnOptions = {
     encoding: 'utf8',
-    shell: process.platform === 'win32',
     ...options,
-  });
+  };
+  let result = spawnSync(cmd, args, spawnOptions);
+
+  // npm і більшість npm-встановлених CLI на Windows — `.cmd`-шими: без shell вони
+  // не стартують. Звичайні `.exe` (зокрема git) мусять йти напряму: shell повторно
+  // парсить аргументи і ламає, наприклад, commit message із пробілами.
+  if (
+    process.platform === 'win32' &&
+    options.shell === undefined &&
+    result.status === null &&
+    ['ENOENT', 'EINVAL'].includes(result.error?.code)
+  ) {
+    result = spawnSync(cmd, args, { ...spawnOptions, shell: true });
+  }
+
   return { ok: result.status === 0, out: `${result.stdout ?? ''}${result.stderr ?? ''}`, status: result.status };
 }
 
