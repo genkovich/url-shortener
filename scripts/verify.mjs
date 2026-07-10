@@ -31,6 +31,8 @@ const hasScript = (name) => Object.hasOwn(scripts, name);
 const rows = [];
 let sawFailure = false;
 
+const actionsEscape = (text) => text.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
+
 /** Один рядок матриці. `skip` буває лише на явне прохання людини (`--skip-e2e`). */
 function record(name, status, detail = '') {
   rows.push({ name, status, detail });
@@ -59,7 +61,13 @@ function npmGate(script, { args = [], label = script } = {}) {
     cwd: root,
   });
   const gateStatus = record(label, ok ? 'ok' : 'fail', ok ? '' : `exit ${status}`);
-  if (!ok && out.trim()) console.error(`\n--- ${label} output ---\n${out.trimEnd()}\n--- end ${label} output ---`);
+  if (!ok) {
+    const failureOutput = out.trim() || `exit ${status}`;
+    console.error(`\n--- ${label} output ---\n${failureOutput}\n--- end ${label} output ---`);
+    if (process.env.GITHUB_ACTIONS === 'true') {
+      console.error(`::error::${actionsEscape(`[${label}] ${failureOutput.slice(0, 6000)}`)}`);
+    }
+  }
   return gateStatus;
 }
 
